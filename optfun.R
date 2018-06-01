@@ -82,12 +82,12 @@ solve.ilp <- function(benefits, strategy.cost, budget.max, all_idx, threshold=FA
   add_constraint(sum_expr(y[i]*strategy.cost[i], i = 1:n) <= budget.max, i = 1:n)
   
   # Solve the model
-  result <- solve_model(opt, with_ROI(solver="lpsolve", verbose=FALSE))
+  result <- solve_model(model, with_ROI(solver="lpsolve", verbose=FALSE))
   
   result
 }
 
-optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, budget.increment.size=FALSE, thresholds = c(90, 75, 50)){
+optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, budget.increment.size=FALSE, thresholds = c(50, 60, 70), budget.length=10){
   
   # Declare a maximum budget for the constrained optimization
   if(!budget.max){
@@ -103,8 +103,8 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
   species.names <- colnames(benefits)
   
   # Create a range of budget values over which to run the optimization
-  budgets <- seq(budget.increment.size, budget.max, by=budget.increment.size)
-  
+  budgets <- seq(from=budget.increment.size, to=budget.max, length.out=budget.length)
+  print(length(budgets))
   # Progress bar
   iters <- length(budgets)*length(thresholds)
   pb <- txtProgressBar(min=1, max=iters, initial = 1)
@@ -115,6 +115,9 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
   # Set up the optimization problem for each threshold
   for(k in 1:length(thresholds)){
     this.threshold <- thresholds[k]
+    
+    # Store results for this threshold
+    threshold.container <- c()
     
     for(j in 1:length(budgets)){
       this.budget.max <- budgets[j]
@@ -127,12 +130,14 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
       parsed$threshold <- this.threshold
       parsed$budget.max <- this.budget.max
       
-      out <- c(out, parsed)
+      threshold.container <- c(threshold.container, parsed)
       
       # Update the progress bar
       step <- step + 1
       setTxtProgressBar(pb, step)
     }
+    threshold.name <- as.character(this.threshold)
+    out[[threshold.name]] <- threshold.container
     step <- step + 1
     setTxtProgressBar(pb, step)
   }
