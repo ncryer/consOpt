@@ -104,7 +104,7 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
   
   # Create a range of budget values over which to run the optimization
   budgets <- seq(from=budget.increment.size, to=budget.max, length.out=budget.length)
-  print(length(budgets))
+  
   # Progress bar
   iters <- length(budgets)*length(thresholds)
   pb <- txtProgressBar(min=1, max=iters, initial = 1)
@@ -130,7 +130,9 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
       parsed$threshold <- this.threshold
       parsed$budget.max <- this.budget.max
       
-      threshold.container <- c(threshold.container, parsed)
+      # Label the results for later
+      budget.name <- as.character(j)
+      threshold.container[[budget.name]] <- parsed
       
       # Update the progress bar
       step <- step + 1
