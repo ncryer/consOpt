@@ -26,17 +26,36 @@ do.plot <- function(range.result){
     #return(list(tau=tau, species=total_species, cost=total_cost))
     tmp.df <- data.frame(totalcost=total_cost, numspecies=total_species, threshold=tau)
     plot.df <- rbind(plot.df, tmp.df)
-    
-    # Do plotting stuff here -- add 
   }
+  
+  # Sanitize the plotting dataframe:
+  # 1) scale budget values to millions
+  # 2) Remove data points for budgets that failed to save additional species
+  plot.df <- scale.costs.plot.df(plot.df)
+  plot.df <- sanitize.plot.df(plot.df)
   
   this.plot <- ggplot(plot.df, aes(x=totalcost, y=numspecies, group=threshold, shape=factor(threshold))) + 
     geom_step(aes(color=factor(threshold))) + 
     geom_point(aes(color=factor(threshold), size=5), show.legend=FALSE) +
-    scale_y_continuous(labels = function (x) floor(x)) +
-    labs(x="Total cost", y = "No. of species groups conserved", color="Persistence threshold")
+    scale_y_continuous(labels = function (x) floor(x), breaks=min(plot.df$numspecies):max(plot.df$numspecies)) +
+    labs(x="Total cost (millions)", y = "No. of species groups conserved", color="Persistence threshold")
   
   plot(this.plot)
   this.plot
 }
 
+
+
+sanitize.plot.df <- function(plot.df){
+  # Remove budget runs that don't add additional species for the cost
+  tmp.df <- unique(plot.df)
+  # Remove rows with duplicated species and threshold
+  tmp.df <- tmp.df[!duplicated(tmp.df[,c("numspecies", "threshold")]),]
+  tmp.df
+}
+
+scale.costs.plot.df <- function(plot.df){
+  # Scale costs to millions
+  plot.df$totalcost <- plot.df$totalcost / (10^6)
+  plot.df
+}

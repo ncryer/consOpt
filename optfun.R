@@ -29,10 +29,33 @@ get.results<- function(result, strategy.names, species.names, strategy.costs){
   )
 }
 
+summarize.result <- function(results, threshold){
+  this.run <- results[[as.character(threshold)]]
+  res.names <- names(this.run)
+  print(paste("Ensuring at least", 50, "persistance probability:"))
+  print("--------------------------------------------")
+  for(res in res.names){
+    this.res <- this.run[[res]]
+    
+    cost <- this.res$total.cost
+    species <- this.res$species
+    strategies <- this.res$strategies
+    
+    
+    
+    print("Strategies:")
+    print(strategies)
+    print("Species:")
+    print(species)
+    print(paste("Total cost:", cost))
+    print("--------------")
+  }
+}
+
 
 solve.ilp <- function(benefits, strategy.cost, budget.max, all_idx, threshold=FALSE){
   if(threshold){
-    B <- (benefits > threshold)*1
+    B <- (benefits >= threshold)*1
   } else {
     B <- benefits
   }
@@ -99,11 +122,14 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
     budget.increment.size <- min(strategy.costs[strategy.costs > 0])
   }
   
+  # Round benefits to nearest whole number before optimization
+  benefits <- round(benefits, digits=0)
+  
   strategy.names <- rownames(benefits)
   species.names <- colnames(benefits)
   
   # Create a range of budget values over which to run the optimization
-  budgets <- seq(from=budget.increment.size, to=budget.max, length.out=budget.length)
+  budgets <- sort(strategy.costs)
   
   # Progress bar
   iters <- length(budgets)*length(thresholds)

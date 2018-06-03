@@ -9,17 +9,17 @@ source('optfun.R')
 # ----------------------------
 
 # Benefits per strategy (rows) for each species (columns)
-benefits <- read.csv("Bij.csv")
+benefits <- read.csv("testdata2/BijFRE.csv")
 rownames(benefits) <- benefits$X
 benefits <- benefits[,-1]
 # Cost of implementing each strategy
-costs <- read.csv("cost.csv")
+costs <- read.csv("testdata2/costFRE.csv")
 strategy_cost <- costs$Cost
 
 
 # Run the optimization over a default number of budget steps, over a default number of threshold
 
-results <- optimize.range(benefits, strategy_cost, budget.max = sum(strategy_cost), all_idx=19)
+results <- optimize.range(benefits, strategy_cost, budget.max = max(strategy_cost), all_idx=15)
 
 # Plot the results
 plt <- do.plot(results)
