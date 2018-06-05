@@ -4,6 +4,7 @@ library(ROI.plugin.lpsolve)
 library(magrittr)
 
 get.results<- function(result, strategy.names, species.names, strategy.costs){
+
   # Retrieve which strategies were assigned to which species
   assignments <- get_solution(result, X[i,j])
   assignments <- assignments[assignments$value==1,]
@@ -20,6 +21,11 @@ get.results<- function(result, strategy.names, species.names, strategy.costs){
   
   # Get strategies
   strategies <- strategy.names[strategies.idx]
+  
+  # Remove redundant columns from assignments
+  assignments$variable <- NULL 
+  assignments$i <- NULL
+  assignments$j <- NULL
   
   list(
     total.cost=total.cost,
@@ -65,7 +71,7 @@ solve.ilp <- function(benefits, strategy.cost, budget.max, all_idx, threshold=FA
   # Number of species
   m <- ncol(B)
   
-  others <- 2:(all_idx-1) 
+  others <- which(1:n != all_idx) 
   
   # Set up the ILP
   # --------------
@@ -110,7 +116,7 @@ solve.ilp <- function(benefits, strategy.cost, budget.max, all_idx, threshold=FA
   result
 }
 
-optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, budget.increment.size=FALSE, thresholds = c(50, 60, 70), budget.length=10){
+optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, budget.increment.size=FALSE, thresholds = c(50, 60, 70), budget.length=10, budget.range=FALSE){
   
   # Declare a maximum budget for the constrained optimization
   if(!budget.max){
@@ -122,14 +128,19 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
     budget.increment.size <- min(strategy.costs[strategy.costs > 0])
   }
   
+  if(!budget.range){
+    # Create a range of budget values over which to run the optimization
+    budgets <- sort(strategy.costs)
+  } else {
+    budgets <- budget.range
+  }
+  
   # Round benefits to nearest whole number before optimization
   benefits <- round(benefits, digits=0)
   
   strategy.names <- rownames(benefits)
   species.names <- colnames(benefits)
   
-  # Create a range of budget values over which to run the optimization
-  budgets <- sort(strategy.costs)
   
   # Progress bar
   iters <- length(budgets)*length(thresholds)
@@ -145,6 +156,35 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
     # Store results for this threshold
     threshold.container <- c()
     
+    # Before any optimization run, count a "baseline" step which amounts to:
+    # 1) Only selecting the baseline strategy, at a cost of 0
+    # 2) Counting the number of species affected, and which species
+    # 3) Removing the baseline strategy and the species only affected by the baseline
+    # This bit must be included in the threshold.container before output
+    
+    baseline.idx <- which(grepl("baseline", strategy.names, ignore.case=T))
+    baseline.strategy <- benefits[baseline.idx,]
+    # Threshold and count species
+    b <- round(baseline.strategy, digits=0)
+    baseline <- (b >= this.threshold)*1
+    baseline.species.idx <- which(baseline>0)
+    # Append results to the container and remove
+    total.cost <- strategy.costs[baseline.idx]
+    baseline.conserved <- species.names[baseline.species.idx]
+    strategies <- baseline.idx
+    threshold.container[["baseline"]] <- list(total.cost = total.cost,
+                                              species=baseline.conserved,
+                                              strategies=strategies)
+    
+    # Remove the baseline strategy AND the baseline-affected species from the subsequent optimization runs
+    # Baseline-affected species are assumed to automatically count towards all strategy combinations, and are thus added in later
+    benefits <- benefits[-baseline.idx, -baseline.species.idx]
+    current.species.names <- species.names[-baseline.species.idx]
+    current.strategy.costs <- strategy.costs[-baseline.idx]
+    if(baseline.idx < all_idx){
+      all_idx <- all_idx - 1  
+    }
+    
     for(j in 1:length(budgets)){
       this.budget.max <- budgets[j]
       
@@ -155,6 +195,9 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
       parsed <- get.results(result, strategy.names = strategy.names, species.names = species.names, strategy.costs = strategy.costs)
       parsed$threshold <- this.threshold
       parsed$budget.max <- this.budget.max
+      
+      # Add the baseline species to the results
+      parsed$species <- c(parsed$species, baseline.conserved)
       
       # Label the results for later
       budget.name <- as.character(j)
