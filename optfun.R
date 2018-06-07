@@ -165,8 +165,8 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
     baseline.idx <- which(grepl("baseline", strategy.names, ignore.case=T))
     baseline.strategy <- benefits[baseline.idx,]
     # Threshold and count species
-    b <- round(baseline.strategy, digits=0)
-    baseline <- (b >= this.threshold)*1
+    
+    baseline <- (baseline.strategy >= this.threshold)*1
     baseline.species.idx <- which(baseline>0)
     # Append results to the container and remove
     total.cost <- strategy.costs[baseline.idx]
@@ -178,21 +178,27 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
     
     # Remove the baseline strategy AND the baseline-affected species from the subsequent optimization runs
     # Baseline-affected species are assumed to automatically count towards all strategy combinations, and are thus added in later
-    benefits <- benefits[-baseline.idx, -baseline.species.idx]
-    current.species.names <- species.names[-baseline.species.idx]
-    current.strategy.costs <- strategy.costs[-baseline.idx]
+    this.benefits <- benefits[-baseline.idx, -baseline.species.idx] # TODO: THIS IS THE BUG!!! Check if there IS a baseline.species.idx, otherwise benefits is null
+    this.species.names <- species.names[-baseline.species.idx]
+    this.strategy.costs <- strategy.costs[-baseline.idx]
+    this.strategy.names <- strategy.names[-baseline.idx]
+    
     if(baseline.idx < all_idx){
-      all_idx <- all_idx - 1  
+      all_idx <- all_idx - 1  # TODO: This must not be decremented each threshold iteration!!
     }
     
     for(j in 1:length(budgets)){
       this.budget.max <- budgets[j]
       
       # Solve model for this budget and threshold
-      result <- solve.ilp(benefits, strategy.cost = strategy.costs, budget.max = this.budget.max, all_idx = all_idx, threshold = this.threshold)
+      print("Debug: solving ilp")
+      print(dim(this.benefits))
+      print(paste("baseline species idx:", baseline.species.idx))
+      result <- solve.ilp(this.benefits, strategy.cost = this.strategy.costs, budget.max = this.budget.max, all_idx = all_idx, threshold = this.threshold)
       
       # Parse results
-      parsed <- get.results(result, strategy.names = strategy.names, species.names = species.names, strategy.costs = strategy.costs)
+      print("Debug: Parsing results")
+      parsed <- get.results(result, strategy.names = this.strategy.names, species.names = this.species.names, strategy.costs = this.strategy.costs)
       parsed$threshold <- this.threshold
       parsed$budget.max <- this.budget.max
       
