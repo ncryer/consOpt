@@ -168,25 +168,35 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
     
     baseline <- (baseline.strategy >= this.threshold)*1
     baseline.species.idx <- which(baseline>0)
-    # Append results to the container and remove
-    total.cost <- strategy.costs[baseline.idx]
-    baseline.conserved <- species.names[baseline.species.idx]
-    strategies <- baseline.idx
-    threshold.container[["baseline"]] <- list(total.cost = total.cost,
-                                              species=baseline.conserved,
-                                              strategies=strategies)
-    
-    # Remove the baseline strategy AND the baseline-affected species from the subsequent optimization runs
-    # Baseline-affected species are assumed to automatically count towards all strategy combinations, and are thus added in later
-    this.benefits <- benefits[-baseline.idx, -baseline.species.idx] # TODO: THIS IS THE BUG!!! Check if there IS a baseline.species.idx, otherwise benefits is null
-    this.species.names <- species.names[-baseline.species.idx]
-    this.strategy.costs <- strategy.costs[-baseline.idx]
-    this.strategy.names <- strategy.names[-baseline.idx]
-    
-    if(baseline.idx < all_idx){
-      all_idx <- all_idx - 1  # TODO: This must not be decremented each threshold iteration!!
+    # If the baseline doesn't save any species, don't remove it since it won't matter
+    if(length(baseline.species.idx) > 0){
+      # Append results to the container and remove
+      total.cost <- strategy.costs[baseline.idx]
+      baseline.conserved <- species.names[baseline.species.idx]
+      strategies <- baseline.idx
+      threshold.container[["baseline"]] <- list(total.cost = total.cost,
+                                                species=baseline.conserved,
+                                                strategies=strategies)
+      
+      # Remove the baseline strategy AND the baseline-affected species from the subsequent optimization runs
+      # Baseline-affected species are assumed to automatically count towards all strategy combinations, and are thus added in later
+      this.benefits <- benefits[-baseline.idx, -baseline.species.idx]
+      this.species.names <- species.names[-baseline.species.idx]
+      this.strategy.costs <- strategy.costs[-baseline.idx]
+      this.strategy.names <- strategy.names[-baseline.idx]
+      if(baseline.idx < all_idx){
+        this.all_idx <- all_idx - 1  
+      } 
+    } else {
+      # No species were affected by the baseline, keep things as they are
+      this.benefits <- benefits
+      this.species.names <- species.names
+      this.strategy.costs <- strategy.costs
+      this.strategy.names <- strategy.names
+      this.all_idx <- all_idx
     }
     
+  
     for(j in 1:length(budgets)){
       this.budget.max <- budgets[j]
       
@@ -194,7 +204,7 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
       print("Debug: solving ilp")
       print(dim(this.benefits))
       print(paste("baseline species idx:", baseline.species.idx))
-      result <- solve.ilp(this.benefits, strategy.cost = this.strategy.costs, budget.max = this.budget.max, all_idx = all_idx, threshold = this.threshold)
+      result <- solve.ilp(this.benefits, strategy.cost = this.strategy.costs, budget.max = this.budget.max, all_idx = this.all_idx, threshold = this.threshold)
       
       # Parse results
       print("Debug: Parsing results")
