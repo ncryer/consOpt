@@ -37,3 +37,21 @@ budgets <- names(runs)
 # View results for the first budget
 
 runs[[budgets[1]]]
+
+# Results can also be condensed into a non-redundant data table, showing unique budget and strategy combinations for each threshold
+
+neat.results <- summary.results.df(results)
+
+
+# Additional tests
+# ----------------
+
+benefits <- read.csv("testdata2/opt_t3.csv")
+rownames(benefits) <- benefits$X
+benefits <- benefits[,-1]
+# Cost of implementing each strategy
+costs <- read.csv("testdata2/costFRE.csv")
+strategy_cost <- costs$Cost
+
+results <- optimize.range(benefits, strategy_cost, budget.max = max(strategy_cost), all_idx=15)
+neat.results <- summary.results.df(results)

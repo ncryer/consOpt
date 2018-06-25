@@ -3,7 +3,14 @@ library(ompr.roi)
 library(ROI.plugin.lpsolve)
 library(magrittr)
 
-get.results<- function(result, strategy.names, species.names, strategy.costs){
+
+symdiff <- function(x, y){
+  # Symmetric set difference 
+  # Returns elements of either x or y that are not in the other
+  setdiff(union(x, y), intersect(x, y))
+}
+
+get.results <- function(result, strategy.names, species.names, strategy.costs){
 
   # Retrieve which strategies were assigned to which species
   assignments <- get_solution(result, X[i,j])
@@ -15,12 +22,14 @@ get.results<- function(result, strategy.names, species.names, strategy.costs){
   strategies.idx <- unique(assignments$i)
   total.cost <- sum(strategy.costs[strategies.idx])
   
-  
   # Get species conserved
   conserved <- unique(assignments$species)
   
   # Get strategies
   strategies <- strategy.names[strategies.idx]
+  if(length(strategies)==0){
+    strategies <- strategies.idx
+  }
   
   # Remove redundant columns from assignments
   assignments$variable <- NULL 
@@ -38,7 +47,7 @@ get.results<- function(result, strategy.names, species.names, strategy.costs){
 summarize.result <- function(results, threshold){
   this.run <- results[[as.character(threshold)]]
   res.names <- names(this.run)
-  print(paste("Ensuring at least", 50, "persistance probability:"))
+  print(paste("Ensuring at least", threshold, "persistance probability:"))
   print("--------------------------------------------")
   for(res in res.names){
     this.res <- this.run[[res]]
@@ -46,9 +55,7 @@ summarize.result <- function(results, threshold){
     cost <- this.res$total.cost
     species <- this.res$species
     strategies <- this.res$strategies
-    
-    
-    
+  
     print("Strategies:")
     print(strategies)
     print("Species:")
@@ -56,6 +63,37 @@ summarize.result <- function(results, threshold){
     print(paste("Total cost:", cost))
     print("--------------")
   }
+}
+
+summary.results.df <- function(results){
+  # Return a dataframe of optimization results, filtering out redundant budget settings:
+  # if a budget setting doesn't yields a set of strategies already discovered by a cheaper budget setting, discard it
+  # and if a budget setting doesn't save additional/different species, discard it
+  res.df <- data.frame()
+  
+  for(threshold in names(results)){
+    this.threshold <- results[[threshold]]
+    for(budget.name in names(this.threshold)){
+      this.run <- this.threshold[[budget.name]]
+      
+      # If no strategies were selected, we're dealing essentially with the baseline strategy
+      if(length(this.run$strategies) == 0){
+        next
+      }
+      
+      this.totalcost <- this.run$total.cost
+      this.strategies <- paste(sort(this.run$strategies), collapse=" | ")
+      this.species <- paste(sort(this.run$species), collapse=" | ")
+      this.numspecies <- length(this.run$species)
+      
+     
+      
+      tmp.df <- data.frame(total_cost=this.totalcost, strategies=this.strategies, species=this.species, threshold=threshold, number_of_species=this.numspecies)
+      res.df <- rbind(res.df, tmp.df)
+    }
+  }
+  
+  unique(res.df)
 }
 
 
@@ -162,7 +200,9 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
     # 3) Removing the baseline strategy and the species only affected by the baseline
     # This bit must be included in the threshold.container before output
     
-    baseline.idx <- which(grepl("baseline", strategy.names, ignore.case=T))
+    
+    # @Laura: "there always needs to be a baseline, and we may as well make it the first row" 
+    baseline.idx <- 1
     baseline.strategy <- benefits[baseline.idx,]
     # Threshold and count species
     
@@ -173,14 +213,23 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
       # Append results to the container and remove
       total.cost <- strategy.costs[baseline.idx]
       baseline.conserved <- species.names[baseline.species.idx]
-      strategies <- baseline.idx
+      strategies <- strategy.names[baseline.idx]
       threshold.container[["baseline"]] <- list(total.cost = total.cost,
                                                 species=baseline.conserved,
-                                                strategies=strategies)
+                                                strategies=strategies,
+                                                budget.max = total.cost)
+      
+      # Edge case: if ALL species are saved by the baseline, return the baseline result and stop here
+      if(length(baseline.species.idx) == ncol(benefits)){
+        out[[as.character(this.threshold)]] <- threshold.container
+        next
+      }
+      
       
       # Remove the baseline strategy AND the baseline-affected species from the subsequent optimization runs
       # Baseline-affected species are assumed to automatically count towards all strategy combinations, and are thus added in later
-      this.benefits <- benefits[-baseline.idx, -baseline.species.idx]
+      this.benefits <- cbind(benefits)
+      this.benefits <- this.benefits[-baseline.idx, -baseline.species.idx]
       this.species.names <- species.names[-baseline.species.idx]
       this.strategy.costs <- strategy.costs[-baseline.idx]
       this.strategy.names <- strategy.names[-baseline.idx]
@@ -189,7 +238,7 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
       } 
     } else {
       # No species were affected by the baseline, keep things as they are
-      this.benefits <- benefits
+      this.benefits <- cbind(benefits)
       this.species.names <- species.names
       this.strategy.costs <- strategy.costs
       this.strategy.names <- strategy.names
@@ -201,13 +250,9 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
       this.budget.max <- budgets[j]
       
       # Solve model for this budget and threshold
-      print("Debug: solving ilp")
-      print(dim(this.benefits))
-      print(paste("baseline species idx:", baseline.species.idx))
       result <- solve.ilp(this.benefits, strategy.cost = this.strategy.costs, budget.max = this.budget.max, all_idx = this.all_idx, threshold = this.threshold)
       
       # Parse results
-      print("Debug: Parsing results")
       parsed <- get.results(result, strategy.names = this.strategy.names, species.names = this.species.names, strategy.costs = this.strategy.costs)
       parsed$threshold <- this.threshold
       parsed$budget.max <- this.budget.max

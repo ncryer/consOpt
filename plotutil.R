@@ -17,7 +17,6 @@ do.plot <- function(range.result){
       this.cost <- this.budget$total.cost
       this.totalspecies <- length(this.budget$species)
       
-      
       total_species <- c(total_species, this.totalspecies)
       total_cost <- c(total_cost, this.cost)
     }
@@ -41,7 +40,7 @@ do.plot <- function(range.result){
     labs(x="Total cost (millions)", y = "No. of species groups conserved", color="Persistence threshold")
   
   plot(this.plot)
-  this.plot
+  plot.df
 }
 
 
