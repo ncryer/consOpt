@@ -40,7 +40,7 @@ do.plot <- function(range.result){
     labs(x="Total cost (millions)", y = "No. of species groups conserved", color="Persistence threshold")
   
   plot(this.plot)
-  plot.df
+  this.plot
 }
 
 
