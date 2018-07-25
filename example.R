@@ -21,8 +21,6 @@ strategy_cost <- costs$Cost
 
 results <- optimize.range(benefits, strategy_cost, budget.max = max(strategy_cost), all_idx=15)
 
-# Plot the results
-plt <- do.plot(results)
 
 # Results can be queried by indexing into the results object, organized by threshold and then by budget
 
@@ -42,6 +40,9 @@ runs[[budgets[1]]]
 
 neat.results <- summary.results.df(results)
 
+# Plot the results
+
+example.plot <- neat.plot(neat.results)
 
 # Additional tests
 # ----------------

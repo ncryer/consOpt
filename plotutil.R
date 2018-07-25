@@ -1,8 +1,28 @@
 library(ggplot2)
 
 
-do.plot <- function(range.result){
+neat.plot <- function(summary.results){
+  # Create a plot object from the neat results table
+  tmp <- summary.results
+  # scale
+  tmp$total_cost <- (tmp$total_cost / 10^6)
   
+  
+  # Create plot object
+  this.plot <- ggplot(tmp, aes(x=total_cost, y=number_of_species, group=threshold, shape=factor(threshold))) +
+    geom_step(aes(color=factor(threshold))) + 
+    geom_point(aes(color=factor(threshold), size=5), show.legend=FALSE) +
+    scale_y_continuous(labels = function (x) floor(x), breaks=min(tmp$number_of_species):max(tmp$number_of_species)) +
+    labs(x="Total cost (millions)", y = "No. of species groups conserved", color="Persistence threshold")
+  
+  plot(this.plot)
+  this.plot
+}
+
+
+
+range.plot <- function(range.result){
+  # This function is deprecated, see neat.plot
   plot.df <- data.frame()
   
   for(threshold.name in names(range.result)){
@@ -42,6 +62,8 @@ do.plot <- function(range.result){
   plot(this.plot)
   this.plot
 }
+
+
 
 
 

@@ -67,7 +67,7 @@ summarize.result <- function(results, threshold){
 
 summary.results.df <- function(results){
   # Return a dataframe of optimization results, filtering out redundant budget settings:
-  # if a budget setting doesn't yields a set of strategies already discovered by a cheaper budget setting, discard it
+  # if a budget setting doesn't yield a set of strategies already discovered by a cheaper budget setting, discard it
   # and if a budget setting doesn't save additional/different species, discard it
   res.df <- data.frame()
   
@@ -154,7 +154,7 @@ solve.ilp <- function(benefits, strategy.cost, budget.max, all_idx, threshold=FA
   result
 }
 
-optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, budget.increment.size=FALSE, thresholds = c(50, 60, 70), budget.length=10, budget.range=FALSE){
+optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, budget.increment.size=FALSE, thresholds = c(50.01, 60.01, 70.01), budget.length=10, budget.range=FALSE){
   
   # Declare a maximum budget for the constrained optimization
   if(!budget.max){
@@ -174,7 +174,7 @@ optimize.range <- function(benefits, strategy.costs, all_idx, budget.max=FALSE, 
   }
   
   # Round benefits to nearest whole number before optimization
-  benefits <- round(benefits, digits=0)
+  benefits <- round(benefits, digits=2)
   
   strategy.names <- rownames(benefits)
   species.names <- colnames(benefits)
