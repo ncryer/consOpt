@@ -1,0 +1,334 @@
+library(ompr)
+library(ompr.roi)
+library(ROI.plugin.lpsolve)
+library(magrittr)
+library(R6)
+# ------------------------------
+# Container object
+# ------------------------------
+
+optStruct <- R6Class("optStruct", 
+  public = list(
+    B = NULL,
+    cost.vector = NULL,
+    all.index = NULL,
+    t = NULL,
+    budget.max = NULL,
+    weights = NULL,
+    
+    get.baseline.results = function(){
+      #' Returns the "results" from only running the baseline strategy
+      #'
+      #' @return A list holding the results
+      return( private$baseline.results )
+    },
+    
+    solve = function(budget){
+      #' Solve the ILP for this optStruct and a supplied budget
+      #' 
+      #' @param budget A number
+      #' @return A result container
+      
+      res <- private$solve.ilp(budget)
+      parsed <- private$parse.results(res)
+      parsed
+    },
+
+    initialize = function(B, cost.vector, all.index, t, weights=NULL){
+      self$B <- B
+      self$cost.vector <- cost.vector
+      self$all.index <- all.index
+      self$t <- t
+      
+      # Check for names and do the rounding of B
+      private$prepare()
+      # Threshold B
+      private$threshold(self$t)
+      # Count the baseline results and remove etc.
+      private$baseline.prep()
+      # We are now ready to do optimization
+    } 
+  ),
+  private = list(
+    current.budget = NULL,
+    baseline.idx = 1,
+    baseline.results = NULL,
+    species.buffer = list(),
+    state = list(
+      weighted = FALSE
+    ),
+
+    prepare = function(){
+      #' Rounds the B matrix, check if B is labelled
+      #'
+      #'
+      self$B <- round(self$B, digits=2)
+
+      strategy.names <- rownames(self$B)
+      species.names <- colnames(self$B)
+
+      if (length(strategy.names) < nrow(self$B) || length(species.names) < ncol(self$B))
+        warning("Warning: Missing strategy or species label information, results will not be meaningful")
+      invisible(self)
+    },
+
+    threshold = function(t){
+      #' Thresholds the B matrix, binarizing the entries
+      #' 
+      #' @param t A number
+      #' @return Modifies the B matrix in place
+      self$t <- t
+      self$B <- as.data.frame( (self$B >= t)*1 )
+      invisible(self)
+    },
+
+    baseline.prep = function(){
+      #' Count up the species saved by the baseline strategy, then remove it;
+      #' These species are buffered and are added freely to nontrivial strategies at results time
+      #' B is mutated by removing the baseline strategy, and the all_index is decremented
+      #'
+      #' @return Updates private$baseline.results 
+
+      baseline.species.idx <- which(self$B[private$baseline.idx,] != 0)
+      baseline.species.names <- colnames(self$B)[baseline.species.idx]
+      species.names.string <- paste(baseline.species.names, sep=" | ")
+      
+      # Store in the species buffer 
+      private$species.buffer <- c(private$species.buffer, baseline.species.names)
+
+      if (length(baseline.species.idx > 0)) {
+        # Remove baseline species from B, costs, and the all_index
+        self$B <- self$B[-private$baseline.idx, -baseline.species.idx]
+        self$cost.vector <- self$cost.vector[-private$baseline.idx]
+        self$all.index <- self$all.index - 1
+      }
+
+      # Update baseline results
+      baseline.num.species <- length(baseline.species.idx)
+      baseline.cost <- 0
+      baseline.threshold <- self$t 
+      
+      private$baseline.results <- list(numspecies = baseline.num.species,
+                                       totalcost = baseline.cost,
+                                       threshold = baseline.threshold,
+                                       species.groups = species.names.string)
+      invisible(self)
+    },
+    
+    parse.results = function(results){
+      #' Convert the optimization results into something human readable
+      #'
+      #' @param results An OMPR solution object
+      #' @return
+      
+      assignments <- get_solution(results, X[i,j])
+      # Get entries of the assignment matrix 
+      assignments <- assignments[assignments$value==1,]
+      
+      # Get strategy names
+      strategy.idx <- sort(unique(assignments$i))
+      strategy.names <- rownames(self$B)[strategy.idx]
+      
+      # Get strategy cost
+      total.cost <- sum(self$cost.vector[strategy.idx])
+      
+      # Get species names
+      species.idx <- sort(unique(assignments$j))
+      species.names <- colnames(self$B)[species.idx]
+      
+      # Add in the baseline species
+      species.names <- c(species.names, self$get.baseline.results()$species.groups)
+      
+      species.total <- length(species.names)
+      threshold <- self$t
+      
+      # Return
+      list(numspecies = species.total, 
+           totalcost = total.cost,
+           threshold = threshold,
+           species.groups = species.names,
+           strategies = strategy.names,
+           assignments = assignments,
+           budget = private$current.budget)
+    },
+
+    solve.ilp = function(budget){
+      #' Solves the ILP given a budget
+      #'
+      #' @param budget A number
+      #' @return A list of results
+      private$current.budget <- budget
+      B <- self$B
+      strategy.cost <- self$cost.vector
+      budget.max <- budget
+      all_idx <- self$all.index
+
+      # Number of strategies 
+      n <- nrow(B)
+      # Number of species
+      m <- ncol(B)
+      
+      others <- which(1:n != all_idx) 
+      
+      # Set up the ILP
+      # --------------
+    
+      model <- MIPModel() %>%
+        
+      # Decision variables 
+      # ------------------
+        
+        # X[i,j] binary selection matrix 
+        add_variable(X[i,j], i = 1:n, j = 1:m, type="binary") %>%
+        # y[i] Strategy selection vector
+        add_variable(y[i], i = 1:n, type="binary") %>%
+        
+        # Objective function
+        # ------------------
+        set_objective(sum_expr(B[i,j] * X[i,j], i = 1:n, j = 1:m)) %>%
+        
+        # Constraints
+        # -----------
+      
+        # Constraint (1):
+        # Ensure only one strategy applies to a target species
+        add_constraint(sum_expr(X[i,j], i = 1:n) <= 1, j = 1:m) %>%
+        
+        # Constraint (2)
+        # Force contributions of management strategy i to every target species j to be null if strategy i is not selected
+        # forall(i in strategies, j in target) xij[i][j] <= yi[i];
+        add_constraint(X[i,j] <= y[i], i = 1:n, j = 1:m) %>%
+        
+        # Constraint (3)
+        # "All" strategy constraint - if the "all" strategy is active, all others must be deselected
+        add_constraint(y[all_idx] + y[i] <= 1, i = others) %>%
+        
+        # Constraint (4)
+        # Budget constraint
+        add_constraint(sum_expr(y[i]*strategy.cost[i], i = 1:n) <= budget.max, i = 1:n)
+      
+      # Solve the model
+      result <- solve_model(model, with_ROI(solver="lpsolve", verbose=FALSE))
+      
+      result
+    }
+  )
+)
+
+# ------------------------------
+# Function to optimize over a range of thresholds
+# ------------------------------
+
+optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds = c(50.01, 60.01, 70.01)){
+  #' TODO: Documentation
+  #'
+  #'
+  #'
+  
+  if ( is.null(budgets) ){
+    # No budget range supplied. Use the costs of individual strategies
+    budgets <- make.budget(cost.vector)  
+  }
+  
+  # Set up the progress bar
+  steps <- length(budgets)*length(thresholds)
+  progress.bar <- txtProgressBar(min=1, max=steps, initial=1)
+  step <- 1
+  
+  out <- data.frame()
+  
+  for (threshold in thresholds) {
+    
+    this.opt <- optStruct$new(B=B, cost.vector=cost.vector, all.index=all.index, t=threshold)
+    
+    for (budget in budgets){
+      optimization.result <- this.opt$solve(budget)
+      out <- rbind(out, opt.result.to.df(optimization.result))
+      
+      # Update progress bar
+      step <- step + 1
+      setTxtProgressBar(progress.bar, step)
+    }
+  }
+  out
+}
+
+opt.result.to.df <- function(opt.result){
+  #' TODO: Documentation
+  #' 
+  #' @param opt.result A list
+  #' @return slkdfl
+  
+  
+  # Concatenate species groups
+  species.groups.flat <- paste(opt.result$species.groups, collapse = " | ")
+  # Concatenate strategies
+  strategies.flat <- paste(opt.result$strategies, collapse = " + ")
+  
+  out <- data.frame(total_cost = opt.result$totalcost, 
+                    strategies = strategies.flat, 
+                    species_groups = species.groups.flat, 
+                    threshold = opt.result$threshold,
+                    number_of_species = opt.result$numspecies,
+                    budget.max = opt.result$budget)
+  out
+}
+
+
+make.budget <- function(cost.vector){
+  sorted.cost <- sort(cost.vector)
+  csum <- cumsum(sorted.cost)
+  out <- sort(c(csum, cost.vector))
+  out <- out[out <= max(cost.vector)]
+  unique(out)
+}
+
+# ------------------------------
+# Recreate the "correct results.png" plot (or try to)
+# ------------------------------
+Bij_fre_01 <- read.csv("~/Projects/Conservation/consOpt/testdata2/Bij_fre_01.csv")
+cost_fre_01 <- read.csv("~/Projects/Conservation/consOpt/testdata2/cost_fre_01.csv")
+
+# Prep benefits 
+rownames(Bij_fre_01) <- Bij_fre_01$X
+Bij_fre_01$X <- NULL
+
+# Prep costs 
+cost.vector <- cost_fre_01$Cost
+
+
+
+# ------------------------------
+# TESTING SHIT
+# ------------------------------
+
+# Initialize the optimization object for threshold=60.01
+testOpt60 <- optStruct$new(B=Bij_fre_01,
+                     cost.vector=cost.vector,
+                     all.index=15,
+                     t=60.01)
+
+
+# Initialize the optimization object for threshold=50.01
+testOpt50 <- optStruct$new(B=Bij_fre_01,
+                           cost.vector=cost.vector,
+                           all.index=15,
+                           t=50.01)
+
+
+# Get the S4+S5 strat
+res50 <- testOpt50$solve(budget=6565064)
+# Get the S12+S13 - actually S12+S1 is cheaper lolol
+res60 <- testOpt60$solve(budget=(249231455 + 1000))
+
+
+# Big range function
+test.range <- optimize.range(Bij_fre_01, cost.vector, all.index = 15)
+
+
+# Ghetto results cleaning
+test.range$duplicated <- duplicated(test.range$species_groups)
+clean.results <- test.range[!test.range$duplicated,]
+clean.results$duplicated <- NULL
+
+
