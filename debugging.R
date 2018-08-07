@@ -23,7 +23,100 @@ optStruct <- R6Class("optStruct",
       return( private$baseline.results )
     },
     
-    solve = function(budget){
+    add.combo = function(input.strategies, combined.strategies){
+      #' The benefits matrix might contain strategies which are combinations of several strategies. The joint selection of these strategies
+      #' will be artificially expensive if two combo strategies contain one or more of the same individual strategy, as the cost will be doubled
+      #' E.g.: Strategy S12 is a combination of strategies S3, S7, and S10.
+      #'       Strategy S13 is a combination of strategies S6, S9, and S10
+      #' Selecting strategies S12 and S13 simultaneously will erronously count the cost of S10 twice, making this combination less favorable to the objective function.
+      #' 
+      #'  
+      #' @param input.strategies A named list denoting strategy names, e.g. list(strategy1="S1", strategy2="S2", ...)
+      #' @param combined.strategies A list of lists denoting strategy names that are combined, e.g. list(strategy1=c("S5", "S6", "S7"), strategy2=c("S6", "S7", "S8"))
+      #' 
+      #' @return Silently updates the benefits matrix and the cost vector
+      #' 
+      #' @example
+      #' TODO
+
+      if ( length(names(input.strategies)) < 1){
+        stop("Error: input.strategies must be a named list")
+      }
+      
+      if ( length(names(combined.strategies)) < 1){
+        stop("Error: combined.strategies must be a named list")
+      }
+      
+     
+      input.strategy.names <- unlist(input.strategies, use.names=F)
+      combined.strategy.names <- unlist(combined.strategies, use.names=F)
+      
+      # Check if the user supplied two (or more) existing strategies to combine 
+      if (length(input.strategy.names) > 1){
+        # Strategies must be in the benefits matrix to be combined
+        if (!all(input.strategy.names %in% rownames(self$B))){
+          stop("User supplied multiple strategies to combine, but they were not found in the benefits matrix")
+        }
+        
+        # Both strategies are present, compute the cost vector correctly
+        combined.strategy.names <- unlist(combined.strategies, use.names=F)
+        applied.strategies <- union(combined.strategy.names, combined.strategy.names)
+        # Make sure strategies are in the cost vector 
+        if (!all(applied.strategies %in% names(self$cost.vector))){
+          stop("Some strategies to be combined were not in the cost vector")
+        }
+        total.cost <- sum(self$cost.vector[applied.strategies])
+        # Add cost to cost vector
+        strategy.name <- paste(input.strategy.names, collapse=" + ")
+        self$cost.vector <- c(self$cost.vector, total.cost)
+        names(self$cost.vector)[length(self$cost.vector)] <- strategy.name
+        # Add to benefits matrix - new species benefit vector is the logical OR of the benefit vectors of each input strategy
+        old.benefits <- self$B[input.strategy.names,]
+        new.row <- apply(old.benefits, 2, max) # take the max (1) of each column - same as (x['S2',] | x['S1',] )*1 for two rows
+        self$B <- rbind(self$B, new.row)
+        l <- length(rownames(self$B))
+        rownames(self$B)[l] <- strategy.name
+        
+        # Done
+        invisible(self)
+      } else {
+       # User supplied ONE strategy name as input, adding a novel strategy to the mix
+        union.strategy.names <- union(combined.strategy.names, combined.strategy.names)
+        if (!all(union.strategy.names %in% rownames(self$B))){
+          stop("Error: User attempted to combine strategies that were not in the benefits matrix")
+        }
+        
+        if (!all(union.strategy.names) %in% names(self$cost.vector)){
+          stop("Error: User attempted to combine strategies that were not in the cost vector")
+        }
+        if (is.null(input.strategy.names)) {
+          warning("No strategy name supplied, setting default name")
+          default.strategy.name <- paste(union.strategy.names, collapse=" + ")
+        } else {
+          default.strategy.name <- input.strategy.names
+        }
+        
+        # Compute cost
+        total.cost <- sum(self$cost.vector[union.strategy.names])
+        self$cost.vector <- c(self$cost.vector, total.cost)
+        names(self$cost.vector)[length(self$cost.vector)] <- default.strategy.name
+        # Compute benefits 
+        old.benefits <- self$B[union.strategy.names,]
+        new.row <- apply(old.benefits, 2, max)
+        self$B <- rbind(self$B, new.row)
+        l <- length(rownames(self$B))
+        rownames(self$B)[l] <- default.strategy.name
+        invisible(self)
+      }
+    },
+    
+    weight.species = function(weights){
+      #'
+      #'
+      # TODO
+    },
+    
+    solve = function(budget, debug=FALSE){
       #' Solve the ILP for this optStruct and a supplied budget
       #' 
       #' @param budget A number
@@ -31,15 +124,19 @@ optStruct <- R6Class("optStruct",
       
       res <- private$solve.ilp(budget)
       parsed <- private$parse.results(res)
+      if(debug){
+        return(res)
+      }
       parsed
     },
 
     initialize = function(B, cost.vector, all.index, t, weights=NULL){
+      # TODO: Add error handling if parameters are missing
       self$B <- B
       self$cost.vector <- cost.vector
       self$all.index <- all.index
       self$t <- t
-      
+      names(self$cost.vector) <- rownames(self$B)
       # Check for names and do the rounding of B
       private$prepare()
       # Threshold B
@@ -61,7 +158,7 @@ optStruct <- R6Class("optStruct",
     prepare = function(){
       #' Rounds the B matrix, check if B is labelled
       #'
-      #'
+      #' @return Updates self$B 
       self$B <- round(self$B, digits=2)
 
       strategy.names <- rownames(self$B)
@@ -69,6 +166,7 @@ optStruct <- R6Class("optStruct",
 
       if (length(strategy.names) < nrow(self$B) || length(species.names) < ncol(self$B))
         warning("Warning: Missing strategy or species label information, results will not be meaningful")
+      names(self$cost.vector) <- strategy.names
       invisible(self)
     },
 
@@ -79,6 +177,8 @@ optStruct <- R6Class("optStruct",
       #' @return Modifies the B matrix in place
       self$t <- t
       self$B <- as.data.frame( (self$B >= t)*1 )
+      # Set the zeroed out species to -1
+      self$B[self$B==0] <- -1
       invisible(self)
     },
 
@@ -89,7 +189,7 @@ optStruct <- R6Class("optStruct",
       #'
       #' @return Updates private$baseline.results 
 
-      baseline.species.idx <- which(self$B[private$baseline.idx,] != 0)
+      baseline.species.idx <- which(self$B[private$baseline.idx,] > 0)
       baseline.species.names <- colnames(self$B)[baseline.species.idx]
       species.names.string <- paste(baseline.species.names, sep=" | ")
       
@@ -119,7 +219,7 @@ optStruct <- R6Class("optStruct",
       #' Convert the optimization results into something human readable
       #'
       #' @param results An OMPR solution object
-      #' @return
+      #' @return A list compiling the results of the optimization
       
       assignments <- get_solution(results, X[i,j])
       # Get entries of the assignment matrix 
@@ -219,29 +319,48 @@ optStruct <- R6Class("optStruct",
 # Function to optimize over a range of thresholds
 # ------------------------------
 
-optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds = c(50.01, 60.01, 70.01)){
-  #' TODO: Documentation
+optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds = c(50.01, 60.01, 70.01), combo.strategies=NULL){
+  #' Perform the optimization over a range of budgets and thresholds
   #'
-  #'
-  #'
+  #' @param B A [strategies]x[species] dataframe with named rows and columns
+  #' @param cost.vector A list of strategy costs
+  #' @param all.index An integer signifying the index of the strategy that combines all strategies
+  #' @param budgets A list of budgets over which to optimize. If NULL, a sensible range of budgets will be automatically generated
+  #' @param thresholds A list of survival thresholds over which to optimize
+  #' @param combo.strategies 
   
-  if ( is.null(budgets) ){
-    # No budget range supplied. Use the costs of individual strategies
-    budgets <- make.budget(cost.vector)  
-  }
-  
+
   # Set up the progress bar
-  steps <- length(budgets)*length(thresholds)
-  progress.bar <- txtProgressBar(min=1, max=steps, initial=1)
+  progress.bar <- txtProgressBar(min=1, max=100, initial=1)
   step <- 1
-  
+
+  # Collect results of the optimization here  
   out <- data.frame()
   
   for (threshold in thresholds) {
     
+    # Initialize a new optimization run with an opStruct
     this.opt <- optStruct$new(B=B, cost.vector=cost.vector, all.index=all.index, t=threshold)
     
+    # Check if combo information needs to be supplied
+    if (!is.null(combo.strategies)){
+      if (length(combo.strategies) > 2){
+        stop("Error: Currently only one strategy is handled")
+      }
+      input <- combo.strategies[[1]]
+      output <- combo.strategies[[2]]
+      this.opt$add.combo(input, output)
+    }
+    
+    if ( is.null(budgets) ){
+      # No budget range supplied. Use the costs of individual strategies
+      budgets <- make.budget(this.opt$cost.vector)  
+    } 
+    
+    
     for (budget in budgets){
+      # Run over the budgets and compile the results 
+      
       optimization.result <- this.opt$solve(budget)
       out <- rbind(out, opt.result.to.df(optimization.result))
       
@@ -276,6 +395,11 @@ opt.result.to.df <- function(opt.result){
 
 
 make.budget <- function(cost.vector){
+  #' Generate a list of budgets that adequately tests out different combinations of strategies
+  #' Currently computes the prefix sum of the strategy cost vector and mixes it with the strategy costs
+  #' 
+  #' @param cost.vector A list of numbers
+  #' @return A sorted list of new budget levels
   sorted.cost <- sort(cost.vector)
   csum <- cumsum(sorted.cost)
   out <- sort(c(csum, cost.vector))
@@ -317,13 +441,18 @@ testOpt50 <- optStruct$new(B=Bij_fre_01,
 
 
 # Get the S4+S5 strat
-res50 <- testOpt50$solve(budget=6565064)
+res50 <- testOpt50$solve(budget=5657184, debug=TRUE)
 # Get the S12+S13 - actually S12+S1 is cheaper lolol
 res60 <- testOpt60$solve(budget=(249231455 + 1000))
 
+# Test adding combos
+input <- list(strat1="S12", strat2="S13")
+output <- list(strat1=c("S3", "S7", "S10"), strat2=c("S6", "S9", "S10"))
+testOpt60$add.combo(input, output)
 
 # Big range function
-test.range <- optimize.range(Bij_fre_01, cost.vector, all.index = 15)
+combo <- list(input, output)
+test.range <- optimize.range(Bij_fre_01, cost.vector, all.index = 15, combo.strategies = combo)
 
 
 # Ghetto results cleaning
