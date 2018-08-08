@@ -3,6 +3,7 @@ library(ompr.roi)
 library(ROI.plugin.lpsolve)
 library(magrittr)
 library(R6)
+source("plotutil.R")
 # ------------------------------
 # Container object
 # ------------------------------
@@ -23,7 +24,7 @@ optStruct <- R6Class("optStruct",
       return( private$baseline.results )
     },
     
-    add.combo = function(input.strategies, combined.strategies){
+    add.combo = function(input.strategies=NULL, combined.strategies){
       #' The benefits matrix might contain strategies which are combinations of several strategies. The joint selection of these strategies
       #' will be artificially expensive if two combo strategies contain one or more of the same individual strategy, as the cost will be doubled
       #' E.g.: Strategy S12 is a combination of strategies S3, S7, and S10.
@@ -86,7 +87,8 @@ optStruct <- R6Class("optStruct",
           stop("Error: User attempted to combine strategies that were not in the benefits matrix")
         }
         
-        if (!all(union.strategy.names) %in% names(self$cost.vector)){
+        if (!all(union.strategy.names %in% names(self$cost.vector))){
+          print(union.strategy.names)
           stop("Error: User attempted to combine strategies that were not in the cost vector")
         }
         if (is.null(input.strategy.names)) {
@@ -336,12 +338,12 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
   
 
   # Set up the progress bar
-  #progress.bar <- txtProgressBar(min=1, max=100, initial=1)
-  #step <- 1
+  progress.bar <- txtProgressBar(min=1, max=100, initial=1)
+  step <- 1
 
   # Collect results of the optimization here  
   out <- data.frame()
-  debug.ctr <- 0
+  
   for (threshold in thresholds) {
     
     # Initialize a new optimization run with an opStruct
@@ -349,12 +351,14 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
     
     # Check if combo information needs to be supplied
     if (!is.null(combo.strategies)){
-      if (length(combo.strategies) > 2){
-        stop("Error: Currently only one strategy is handled")
+      combos <- combo.strategies$get.combos()
+      
+      for(i in 1:length(combos)){
+        input <-combos[[i]]$input
+        output <- combos[[i]]$output
+        this.opt$add.combo(input, output)
       }
-      input <- combo.strategies[[1]]
-      output <- combo.strategies[[2]]
-      this.opt$add.combo(input, output)
+      
     }
     
     if ( is.null(budgets) ){
@@ -371,12 +375,37 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
       out <- rbind(out, opt.result.to.df(optimization.result))
       
       # Update progress bar
-      #step <- step + 1
-      #setTxtProgressBar(progress.bar, step)
+      step <- step + 1
+      setTxtProgressBar(progress.bar, step)
     }
   }
-  print(paste("Ran", debug.ctr, "baselines"))
-  out
+  
+  
+  # Remove duplicate entries from the result
+  
+  remove.duplicates(out)
+}
+
+
+#' Title
+#'
+#' @param range.result.df 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+remove.duplicates <- function(range.result.df){
+  # Remove runs that didn't contribute new species groups for the same number of species saved
+  tmp <- range.result.df[!duplicated(range.result.df$species_groups),]
+  # Remove expensive strategies that don't improve on the number of species saved
+  tmp$duplicated <- FALSE
+  for(threshold in unique(tmp$threshold)){
+    th.idx <- which(tmp$threshold==threshold)
+    this.df <- tmp[th.idx,]
+    tmp[th.idx,"duplicated"] <- duplicated(this.df$number_of_species)
+  }
+  tmp[!tmp$duplicated,]
 }
 
 opt.result.to.df <- function(opt.result){
@@ -397,6 +426,7 @@ opt.result.to.df <- function(opt.result){
                     threshold = opt.result$threshold,
                     number_of_species = opt.result$numspecies,
                     budget.max = opt.result$budget)
+  out$duplicated <- NULL
   out
 }
 
@@ -414,6 +444,35 @@ make.budget <- function(cost.vector){
   out <- unique(out)
   return( c(0, out))
 }
+
+# ------------------------------
+# Struct for combinations (for optimize.range())
+# ------------------------------
+
+combination <- R6Class("combination", 
+                       public = list(
+                         add.combo = function(input, output){
+                           #' Add a combination 
+                           #' 
+                           #' @param input A named list of the form: list(strat1="<some name>")
+                           #' @param output A named list of the form list(strat1=c("strategy1", "strategy2", "..."))
+                           #' @return void
+                           
+                           combo.idx <- private$combo.counter + 1
+                           private$combo.counter <- combo.idx
+                           
+                           private$combos[[combo.idx]] <- list(input=input, output=output)
+                           invisible(self)
+                         },
+                         
+                         get.combos = function(){
+                           private$combos
+                         }
+                       ),
+                       private = list(
+                         combo.counter = 0,
+                         combos = list()
+                       ))
 
 # ------------------------------
 # Recreate the "correct results.png" plot (or try to)
@@ -454,19 +513,24 @@ res50 <- testOpt50$solve(budget=5657184, debug=TRUE)
 # Test adding combos
 input <- list(strat1="S12", strat2="S13")
 output <- list(strat1=c("S3", "S7", "S10"), strat2=c("S6", "S9", "S10"))
+# Add S12+S13
 testOpt60$add.combo(input, output)
+# Add an arbitrary (un-named) combination of S1, S2 (will be named S1+S2)
+testOpt60$add.combo(input.strategies = list(strat1=NULL), combined.strategies=list(strat1= c("S1", "S2")))
 
-# Recover the S12+S13 strat
-res60 <- testOpt60$solve(budget=204454450.5)
 
+
+
+
+
+
+### (Potentially multiple) combinations optimize.range
+combo <- combination$new()
+combo$add.combo(input, output) # Add the S12+S13 
 # Big range function
-combo <- list(input, output)
+
 test.range <- optimize.range(Bij_fre_01, cost.vector, all.index = 15, combo.strategies = combo)
 
 
-# Ghetto results cleaning
-test.range$duplicated <- duplicated(test.range$species_groups)
-clean.results <- test.range[!test.range$duplicated,]
-clean.results$duplicated <- NULL
 
 
