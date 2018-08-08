@@ -122,6 +122,9 @@ optStruct <- R6Class("optStruct",
       #' @param budget A number
       #' @return A result container
       
+      if (budget == 0){
+        return(self$get.baseline.results())
+      }
       res <- private$solve.ilp(budget)
       parsed <- private$parse.results(res)
       if(debug){
@@ -211,7 +214,9 @@ optStruct <- R6Class("optStruct",
       private$baseline.results <- list(numspecies = baseline.num.species,
                                        totalcost = baseline.cost,
                                        threshold = baseline.threshold,
-                                       species.groups = species.names.string)
+                                       species.groups = species.names.string,
+                                       strategies="Baseline",
+                                       budget = baseline.cost)
       invisible(self)
     },
     
@@ -331,12 +336,12 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
   
 
   # Set up the progress bar
-  progress.bar <- txtProgressBar(min=1, max=100, initial=1)
-  step <- 1
+  #progress.bar <- txtProgressBar(min=1, max=100, initial=1)
+  #step <- 1
 
   # Collect results of the optimization here  
   out <- data.frame()
-  
+  debug.ctr <- 0
   for (threshold in thresholds) {
     
     # Initialize a new optimization run with an opStruct
@@ -362,13 +367,15 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
       # Run over the budgets and compile the results 
       
       optimization.result <- this.opt$solve(budget)
+      
       out <- rbind(out, opt.result.to.df(optimization.result))
       
       # Update progress bar
-      step <- step + 1
-      setTxtProgressBar(progress.bar, step)
+      #step <- step + 1
+      #setTxtProgressBar(progress.bar, step)
     }
   }
+  print(paste("Ran", debug.ctr, "baselines"))
   out
 }
 
@@ -404,7 +411,8 @@ make.budget <- function(cost.vector){
   csum <- cumsum(sorted.cost)
   out <- sort(c(csum, cost.vector))
   out <- out[out <= max(cost.vector)]
-  unique(out)
+  out <- unique(out)
+  return( c(0, out))
 }
 
 # ------------------------------
@@ -442,13 +450,14 @@ testOpt50 <- optStruct$new(B=Bij_fre_01,
 
 # Get the S4+S5 strat
 res50 <- testOpt50$solve(budget=5657184, debug=TRUE)
-# Get the S12+S13 - actually S12+S1 is cheaper lolol
-res60 <- testOpt60$solve(budget=(249231455 + 1000))
 
 # Test adding combos
 input <- list(strat1="S12", strat2="S13")
 output <- list(strat1=c("S3", "S7", "S10"), strat2=c("S6", "S9", "S10"))
 testOpt60$add.combo(input, output)
+
+# Recover the S12+S13 strat
+res60 <- testOpt60$solve(budget=204454450.5)
 
 # Big range function
 combo <- list(input, output)
