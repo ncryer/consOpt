@@ -124,6 +124,10 @@ optStruct <- R6Class("optStruct",
       #' @param budget A number
       #' @return A result container
       
+      if (private$baseline.solved) {
+        return(self$get.baseline.results())
+      }
+      
       if (budget == 0){
         return(self$get.baseline.results())
       }
@@ -137,6 +141,11 @@ optStruct <- R6Class("optStruct",
 
     initialize = function(B, cost.vector, all.index, t, weights=NULL){
       # TODO: Add error handling if parameters are missing
+      if(all.index > nrow(B)){
+        stop("Error: User supplied a strategy (all.index) that was not in the benefits matrix")
+      }
+      
+      
       self$B <- B
       self$cost.vector <- cost.vector
       self$all.index <- all.index
@@ -153,6 +162,7 @@ optStruct <- R6Class("optStruct",
   ),
   private = list(
     current.budget = NULL,
+    baseline.solved = FALSE,
     baseline.idx = 1,
     baseline.results = NULL,
     species.buffer = list(),
@@ -195,6 +205,12 @@ optStruct <- R6Class("optStruct",
       #' @return Updates private$baseline.results 
 
       baseline.species.idx <- which(self$B[private$baseline.idx,] > 0)
+      
+      # If ALL species are saved by the baseline, the B matrix will be useless
+      if (length(baseline.species.idx) == ncol(self$B)){
+        private$baseline.solved = TRUE
+      }
+      
       baseline.species.names <- colnames(self$B)[baseline.species.idx]
       species.names.string <- paste(baseline.species.names, sep=" | ")
       
