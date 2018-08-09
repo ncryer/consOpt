@@ -8,8 +8,8 @@ source('debugging.R')
 # Load in and prepare the data
 # ----------------------------
 
-Bij_fre_01 <- read.csv("~/Projects/Conservation/consOpt/testdata2/Bij_fre_01.csv")
-cost_fre_01 <- read.csv("~/Projects/Conservation/consOpt/testdata2/cost_fre_01.csv")
+Bij_fre_01 <- read.csv("testdata2/Bij_fre_01.csv")
+cost_fre_01 <- read.csv("testdata2/cost_fre_01.csv")
 
 # Prep benefits 
 rownames(Bij_fre_01) <- Bij_fre_01$X
