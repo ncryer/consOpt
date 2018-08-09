@@ -398,8 +398,8 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
   
   
   # Remove duplicate entries from the result
-  
-  remove.duplicates(out)
+  out
+  #remove.duplicates(out)
 }
 
 
@@ -413,15 +413,17 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
 #' @examples
 remove.duplicates <- function(range.result.df){
   # Remove runs that didn't contribute new species groups for the same number of species saved
-  tmp <- range.result.df[!duplicated(range.result.df$species_groups),]
+  tmp <- range.result.df
   # Remove expensive strategies that don't improve on the number of species saved
   tmp$duplicated <- FALSE
   for(threshold in unique(tmp$threshold)){
     th.idx <- which(tmp$threshold==threshold)
     this.df <- tmp[th.idx,]
-    tmp[th.idx,"duplicated"] <- duplicated(this.df$number_of_species)
+    tmp[th.idx,"duplicated"] <- duplicated(this.df$species_groups)
   }
-  tmp[!tmp$duplicated,]
+  out <- tmp[!tmp$duplicated,]
+  out$duplicated <- NULL
+  out
 }
 
 opt.result.to.df <- function(opt.result){
