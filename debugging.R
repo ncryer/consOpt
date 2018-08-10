@@ -398,8 +398,8 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
   
   
   # Remove duplicate entries from the result
-  out
-  #remove.duplicates(out)
+  
+  remove.duplicates(out)
 }
 
 
