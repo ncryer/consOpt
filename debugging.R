@@ -415,14 +415,18 @@ remove.duplicates <- function(range.result.df){
   # Remove runs that didn't contribute new species groups for the same number of species saved
   tmp <- range.result.df
   # Remove expensive strategies that don't improve on the number of species saved
-  tmp$duplicated <- FALSE
+  tmp$duplicated_species <- FALSE
+  tmp$duplicated_numspecies <- FALSE
   for(threshold in unique(tmp$threshold)){
     th.idx <- which(tmp$threshold==threshold)
     this.df <- tmp[th.idx,]
-    tmp[th.idx,"duplicated"] <- duplicated(this.df$species_groups)
+    tmp[th.idx,]$duplicated_species <- duplicated(this.df$species_groups)
+    tmp[th.idx,]$duplicated_numspecies <- duplicated(this.df$number_of_species)
   }
-  out <- tmp[!tmp$duplicated,]
-  out$duplicated <- NULL
+  out <- tmp[!tmp$duplicated_species,]
+  out <- out[!out$duplicated_numspecies,]
+  out$duplicated_species <- NULL
+  out$duplicated_numspecies <- NULL
   out
 }
 

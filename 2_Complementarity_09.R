@@ -120,6 +120,5 @@ testOpt50 <- optStruct$new(B=Bij_fre_01,
 # The combination object is then passed to the optimize.range() function as an argument. If this argument is NULL (or just not supplied),
 # no combo information is added. 
 test.range <- optimize.range(Bij_fre_01, cost.vector, all.index = 15)
-
 # Plotting the results is straightforward, as much of the work is done 
 neat.plot(test.range)
