@@ -398,7 +398,7 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
   
   
   # Remove duplicate entries from the result
-  
+  #out
   remove.duplicates(out)
 }
 
@@ -453,18 +453,31 @@ opt.result.to.df <- function(opt.result){
 }
 
 
+#' make.budget <- function(cost.vector){
+#'   #' Generate a list of budgets that adequately tests out different combinations of strategies
+#'   #' Currently computes the prefix sum of the strategy cost vector and mixes it with the strategy costs
+#'   #' 
+#'   #' @param cost.vector A list of numbers
+#'   #' @return A sorted list of new budget levels
+#'   sorted.cost <- sort(cost.vector)
+#'   csum <- cumsum(sorted.cost)
+#'   out <- sort(c(csum, cost.vector))
+#'   out <- out[out <= max(cost.vector)]
+#'   out <- unique(out)
+#'   return( c(0, out))
+#' }
+
 make.budget <- function(cost.vector){
   #' Generate a list of budgets that adequately tests out different combinations of strategies
   #' Currently computes the prefix sum of the strategy cost vector and mixes it with the strategy costs
   #' 
   #' @param cost.vector A list of numbers
   #' @return A sorted list of new budget levels
-  sorted.cost <- sort(cost.vector)
-  csum <- cumsum(sorted.cost)
-  out <- sort(c(csum, cost.vector))
-  out <- out[out <= max(cost.vector)]
-  out <- unique(out)
-  return( c(0, out))
+  sc <- sort(unlist(cost.vector)) / (10^6)
+  newbudget <- seq(min(sc), max(sc), 30)
+  newbudget <- newbudget * (10^6)
+  out <- c(cost.vector, newbudget)
+  return(c(0, unique(sort(out))))
 }
 
 # ------------------------------
