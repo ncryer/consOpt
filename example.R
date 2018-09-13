@@ -78,3 +78,29 @@ test.range <- optimize.range(Bij_fre_01, cost.vector, all.index = 15, combo.stra
 # Plotting the results is straightforward, as much of the work is done 
 neat.plot(test.range)
 
+# ------------------------------
+# Testing the weighting function
+# ------------------------------
+
+Species_weight <- read.csv("testdata2/Species_weight.csv")
+# Notice that the weights must be in exactly the same order as the species in the benefit matrix
+# I can add stuff to automatically ensure this, but it's a lot of work so currently you're on your own
+weights <- Species_weight$Weight
+
+
+# Test if generic optimization objects are correctly constructed
+testOpt60Weighted <- optStruct$new(B=Bij_fre_01,
+                           cost.vector=cost.vector,
+                           all.index=15,
+                           t=60.01, 
+                           weights = weights)
+
+# Test if we can optimize over a range of budgets and thresholds
+test.range.weighted <- optimize.range(
+  B = Bij_fre_01,
+  cost.vector = cost.vector,
+  all.index = 15,
+  weights = weights
+)
+
+neat.plot(test.range.weighted)
