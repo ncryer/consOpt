@@ -113,9 +113,19 @@ optStruct <- R6Class("optStruct",
     },
     
     weight.species = function(weights){
+      #' Replace each species that survived the threshold with a species weight
       #'
-      #'
-      # TODO
+      #' @param weights A list of integers. Must have a number for each species in the benefits matrix.
+      #' @returns Updates the benefits matrix in place 
+      
+      if ( ncol(self$B) != length(weights) ){
+        stop("Mismatch between species matrix and weights")
+      }
+      
+      for(i in 1:nrow(self$B)){
+        self$B[i,] <- self$B[i,] * weights
+      }
+      invisible(self)
     },
     
     solve = function(budget, debug=FALSE){
@@ -155,8 +165,14 @@ optStruct <- R6Class("optStruct",
       private$prepare()
       # Threshold B
       private$threshold(self$t)
+      # Weight species groups (optional)
+      if (!is.null(weights)) {
+        self$weight.species(weights)
+      }
       # Count the baseline results and remove etc.
       private$baseline.prep()
+      # Set the zeroed out species to -1
+      self$B[self$B==0] <- -1
       # We are now ready to do optimization
     } 
   ),
@@ -192,8 +208,6 @@ optStruct <- R6Class("optStruct",
       #' @return Modifies the B matrix in place
       self$t <- t
       self$B <- as.data.frame( (self$B >= t)*1 )
-      # Set the zeroed out species to -1
-      self$B[self$B==0] <- -1
       invisible(self)
     },
 
@@ -342,7 +356,7 @@ optStruct <- R6Class("optStruct",
 # Function to optimize over a range of thresholds
 # ------------------------------
 
-optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds = c(50.01, 60.01, 70.01), combo.strategies=NULL){
+optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds = c(50.01, 60.01, 70.01), combo.strategies=NULL, weights=NULL){
   #' Perform the optimization over a range of budgets and thresholds
   #'
   #' @param B A [strategies]x[species] dataframe with named rows and columns
@@ -352,7 +366,7 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
   #' @param thresholds A list of survival thresholds over which to optimize
   #' @param combo.strategies 
   
-
+  
   # Set up the progress bar
   progress.bar <- txtProgressBar(min=1, max=100, initial=1)
   step <- 1
@@ -363,7 +377,7 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
   for (threshold in thresholds) {
     
     # Initialize a new optimization run with an opStruct
-    this.opt <- optStruct$new(B=B, cost.vector=cost.vector, all.index=all.index, t=threshold)
+    this.opt <- optStruct$new(B=B, cost.vector=cost.vector, all.index=all.index, t=threshold, weights=weights)
     
     # Check if combo information needs to be supplied
     if (!is.null(combo.strategies)){
@@ -451,21 +465,6 @@ opt.result.to.df <- function(opt.result){
   out$duplicated <- NULL
   out
 }
-
-
-#' make.budget <- function(cost.vector){
-#'   #' Generate a list of budgets that adequately tests out different combinations of strategies
-#'   #' Currently computes the prefix sum of the strategy cost vector and mixes it with the strategy costs
-#'   #' 
-#'   #' @param cost.vector A list of numbers
-#'   #' @return A sorted list of new budget levels
-#'   sorted.cost <- sort(cost.vector)
-#'   csum <- cumsum(sorted.cost)
-#'   out <- sort(c(csum, cost.vector))
-#'   out <- out[out <= max(cost.vector)]
-#'   out <- unique(out)
-#'   return( c(0, out))
-#' }
 
 make.budget <- function(cost.vector){
   #' Generate a list of budgets that adequately tests out different combinations of strategies
