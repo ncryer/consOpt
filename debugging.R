@@ -508,3 +508,31 @@ combination <- R6Class("combination",
                        ))
 
 
+
+#' Title
+#'
+#' @param combo.mat 
+#'
+#' @return A combination R6 object
+#' @export
+#'
+#' @examples
+parse.combination.matrix <- function(combo.mat){
+  # Find combination strategies by identifying columns containing nontrivial combinations
+  strategy.combination.size <- apply(combo.mat, 2, function(x) length(which(x != '')))
+  combinations.idx <- which(strategy.combination.size > 1 & strategy.combination.size < length(strategy.combination.size))
+  combinations <- combo.mat[,combinations.idx]
+  
+  # Find strategies that are implemented by several combination strategies
+  combo.table <- table(unlist(combinations))
+  combo.table <- combo.table[2:length(combo.table)]
+  overlaps <- names(combo.table[which(combo.table > 1)])
+  
+  # Each strategy containing each overlap must be combined
+}
+
+
+
+
+
+
