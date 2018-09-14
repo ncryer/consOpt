@@ -528,11 +528,38 @@ parse.combination.matrix <- function(combo.mat){
   combo.table <- combo.table[2:length(combo.table)]
   overlaps <- names(combo.table[which(combo.table > 1)])
   
-  # Each strategy containing each overlap must be combined
+  # Each strategy containing each overlap must be combined 
+  combo.container <- combination$new()
+  
+  for (overlap in overlaps){
+    # Find all strategies containing this overlapping strategy
+    to.combine <- c()
+    for (i in 1:ncol(combinations)){
+      if (overlap %in% combinations[,i]) {
+        to.combine <- c(to.combine, colnames(combinations)[i])
+      }
+    }
+    # Combine the found strategies
+    input <- list()
+    for (i in 1:length(to.combine)){
+      input[i] <- to.combine[i]
+      names(input)[i] <- paste("strat", i, sep="")
+    }
+    output <- list()
+    for (i in 1:length(to.combine)){
+      output[i] <- list(remove.empty(combinations[,i]))
+      names(output)[i] <- paste("strat", i, sep="")
+    }
+    
+    combo.container$add.combo(input, output)
+  }
+  combo.container
 }
 
 
-
+remove.empty <- function(factorlist){
+  as.character(factorlist[factorlist != ""])
+}
 
 
 
