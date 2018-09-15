@@ -56,6 +56,7 @@ optStruct <- R6Class("optStruct",
       if (length(input.strategy.names) > 1){
         # Strategies must be in the benefits matrix to be combined
         if (!all(input.strategy.names %in% rownames(self$B))){
+          print(input.strategy.names)
           stop("User supplied multiple strategies to combine, but they were not found in the benefits matrix")
         }
         
@@ -64,6 +65,9 @@ optStruct <- R6Class("optStruct",
         applied.strategies <- union(combined.strategy.names, combined.strategy.names)
         # Make sure strategies are in the cost vector 
         if (!all(applied.strategies %in% names(self$cost.vector))){
+          print(applied.strategies %in% names(self$cost.vector))
+          print(names(self$cost.vector))
+          print(applied.strategies)
           stop("Some strategies to be combined were not in the cost vector")
         }
         total.cost <- sum(self$cost.vector[applied.strategies])
@@ -547,7 +551,8 @@ parse.combination.matrix <- function(combo.mat){
     }
     output <- list()
     for (i in 1:length(to.combine)){
-      output[i] <- list(remove.empty(combinations[,i]))
+      strat <- list(remove.empty(combinations[,to.combine[i]]))
+      output[i] <- strat
       names(output)[i] <- paste("strat", i, sep="")
     }
     
@@ -558,7 +563,8 @@ parse.combination.matrix <- function(combo.mat){
 
 
 remove.empty <- function(factorlist){
-  as.character(factorlist[factorlist != ""])
+  out <- as.character(factorlist[factorlist != ""])
+  gsub(" ", "", out)
 }
 
 
