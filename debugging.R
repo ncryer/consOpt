@@ -360,17 +360,15 @@ optStruct <- R6Class("optStruct",
 # Function to optimize over a range of thresholds
 # ------------------------------
 
+#' Perform the optimization over a range of budgets and thresholds
+#'
+#' @param B A [strategies]x[species] dataframe with named rows and columns
+#' @param cost.vector A list of strategy costs
+#' @param all.index An integer signifying the index of the strategy that combines all strategies
+#' @param budgets A list of budgets over which to optimize. If NULL, a sensible range of budgets will be automatically generated
+#' @param thresholds A list of survival thresholds over which to optimize
+#' @param combo.strategies 
 optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds = c(50.01, 60.01, 70.01), combo.strategies=NULL, weights=NULL){
-  #' Perform the optimization over a range of budgets and thresholds
-  #'
-  #' @param B A [strategies]x[species] dataframe with named rows and columns
-  #' @param cost.vector A list of strategy costs
-  #' @param all.index An integer signifying the index of the strategy that combines all strategies
-  #' @param budgets A list of budgets over which to optimize. If NULL, a sensible range of budgets will be automatically generated
-  #' @param thresholds A list of survival thresholds over which to optimize
-  #' @param combo.strategies 
-  
-  
   # Set up the progress bar
   progress.bar <- txtProgressBar(min=1, max=100, initial=1)
   step <- 1
