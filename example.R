@@ -104,3 +104,13 @@ test.range.weighted <- optimize.range(
 )
 
 neat.plot(test.range.weighted)
+
+
+# ------------------------------
+# Test combinations
+# ------------------------------
+
+
+test <- parse.combination.matrix(COMBO_info)
+test.range <- optimize.range(Bij_fre_01, cost.vector, all.index = 15, combo.strategies = test)
+neat.plot(test.range)

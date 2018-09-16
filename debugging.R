@@ -56,6 +56,7 @@ optStruct <- R6Class("optStruct",
       if (length(input.strategy.names) > 1){
         # Strategies must be in the benefits matrix to be combined
         if (!all(input.strategy.names %in% rownames(self$B))){
+          print(input.strategy.names)
           stop("User supplied multiple strategies to combine, but they were not found in the benefits matrix")
         }
         
@@ -64,6 +65,9 @@ optStruct <- R6Class("optStruct",
         applied.strategies <- union(combined.strategy.names, combined.strategy.names)
         # Make sure strategies are in the cost vector 
         if (!all(applied.strategies %in% names(self$cost.vector))){
+          print(applied.strategies %in% names(self$cost.vector))
+          print(names(self$cost.vector))
+          print(applied.strategies)
           stop("Some strategies to be combined were not in the cost vector")
         }
         total.cost <- sum(self$cost.vector[applied.strategies])
@@ -356,17 +360,15 @@ optStruct <- R6Class("optStruct",
 # Function to optimize over a range of thresholds
 # ------------------------------
 
+#' Perform the optimization over a range of budgets and thresholds
+#'
+#' @param B A [strategies]x[species] dataframe with named rows and columns
+#' @param cost.vector A list of strategy costs
+#' @param all.index An integer signifying the index of the strategy that combines all strategies
+#' @param budgets A list of budgets over which to optimize. If NULL, a sensible range of budgets will be automatically generated
+#' @param thresholds A list of survival thresholds over which to optimize
+#' @param combo.strategies 
 optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds = c(50.01, 60.01, 70.01), combo.strategies=NULL, weights=NULL){
-  #' Perform the optimization over a range of budgets and thresholds
-  #'
-  #' @param B A [strategies]x[species] dataframe with named rows and columns
-  #' @param cost.vector A list of strategy costs
-  #' @param all.index An integer signifying the index of the strategy that combines all strategies
-  #' @param budgets A list of budgets over which to optimize. If NULL, a sensible range of budgets will be automatically generated
-  #' @param thresholds A list of survival thresholds over which to optimize
-  #' @param combo.strategies 
-  
-  
   # Set up the progress bar
   progress.bar <- txtProgressBar(min=1, max=100, initial=1)
   step <- 1
@@ -412,7 +414,6 @@ optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds
   
   
   # Remove duplicate entries from the result
-  #out
   remove.duplicates(out)
 }
 
@@ -507,5 +508,62 @@ combination <- R6Class("combination",
                          combo.counter = 0,
                          combos = list()
                        ))
+
+
+
+#' Title
+#'
+#' @param combo.mat 
+#'
+#' @return A combination R6 object
+#' @export
+#'
+#' @examples
+parse.combination.matrix <- function(combo.mat){
+  # Find combination strategies by identifying columns containing nontrivial combinations
+  strategy.combination.size <- apply(combo.mat, 2, function(x) length(which(x != '')))
+  combinations.idx <- which(strategy.combination.size > 1 & strategy.combination.size < length(strategy.combination.size))
+  combinations <- combo.mat[,combinations.idx]
+  
+  # Find strategies that are implemented by several combination strategies
+  combo.table <- table(unlist(combinations))
+  combo.table <- combo.table[2:length(combo.table)]
+  overlaps <- names(combo.table[which(combo.table > 1)])
+  
+  # Each strategy containing each overlap must be combined 
+  combo.container <- combination$new()
+  
+  for (overlap in overlaps){
+    # Find all strategies containing this overlapping strategy
+    to.combine <- c()
+    for (i in 1:ncol(combinations)){
+      if (overlap %in% combinations[,i]) {
+        to.combine <- c(to.combine, colnames(combinations)[i])
+      }
+    }
+    # Combine the found strategies
+    input <- list()
+    for (i in 1:length(to.combine)){
+      input[i] <- to.combine[i]
+      names(input)[i] <- paste("strat", i, sep="")
+    }
+    output <- list()
+    for (i in 1:length(to.combine)){
+      strat <- list(remove.empty(combinations[,to.combine[i]]))
+      output[i] <- strat
+      names(output)[i] <- paste("strat", i, sep="")
+    }
+    
+    combo.container$add.combo(input, output)
+  }
+  combo.container
+}
+
+
+remove.empty <- function(factorlist){
+  out <- as.character(factorlist[factorlist != ""])
+  gsub(" ", "", out)
+}
+
 
 
