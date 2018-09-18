@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1537262733894.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "BEE8C635",
+    "lastKnownWriteTime" : 1537270754,
+    "last_content_update" : 1537270754068,
+    "path" : "~/Projects/consOpt/consOpt/R/plotting.R",
+    "project_path" : "R/plotting.R",
+    "properties" : {
+        "cursorPosition" : "2,9",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
