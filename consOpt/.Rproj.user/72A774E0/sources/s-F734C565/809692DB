@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1537344715803.000,
+    "dirty" : false,
+    "encoding" : "ISO-8859-1",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "809692DB",
+    "lastKnownWriteTime" : 1537349214,
+    "last_content_update" : 1537349214646,
+    "path" : "~/Projects/consOpt/consOpt/R/combinations.R",
+    "project_path" : "R/combinations.R",
+    "properties" : {
+        "cursorPosition" : "69,1",
+        "scrollLine" : "52"
+    },
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

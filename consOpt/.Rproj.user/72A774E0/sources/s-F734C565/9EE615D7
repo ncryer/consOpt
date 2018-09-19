@@ -5,18 +5,18 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "2622545308",
+    "hash" : "0",
     "id" : "9EE615D7",
-    "lastKnownWriteTime" : 1537270391,
-    "last_content_update" : 1537270391068,
+    "lastKnownWriteTime" : 1537354296,
+    "last_content_update" : 1537354296928,
     "path" : "~/Projects/consOpt/consOpt/R/optimization.R",
     "project_path" : "R/optimization.R",
     "properties" : {
-        "cursorPosition" : "355,32",
-        "scrollLine" : "352"
+        "cursorPosition" : "242,0",
+        "scrollLine" : "226"
     },
     "relative_order" : 2,
-    "source_on_save" : false,
+    "source_on_save" : true,
     "source_window" : "",
     "type" : "r_source"
 }

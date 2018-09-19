@@ -1,15 +1,18 @@
 #' Plot results of running optimize.range
 #'
-#' asdasd
+#' Provides a convenient way to visualize optimization results over several budget increments and
+#' persistence thresholds.
 #'
 #' @param summary.results A dataframe containing the results of the complementarity optimization
 #' @param draw.labels Boolean, indicating whether to draw strategy names on the plot
 #'
-#' @return A ggplot object
+#' @return this.plot A ggplot object
 #' @export
 #'
 #' @examples
-plot.results <- function(summary.results, draw.labels=TRUE){
+#' res <- Optimize(benefits.matrix, cost.vector, all.index=nrow(benefits.matrix))
+#' PlotResults(res)
+PlotResults <- function(summary.results, draw.labels=TRUE){
   # Create a plot object from the neat results table
   tmp <- summary.results
   # scale

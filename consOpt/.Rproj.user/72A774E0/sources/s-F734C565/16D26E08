@@ -1,21 +1,21 @@
 {
     "collab_server" : "",
     "contents" : "",
-    "created" : 1537269218081.000,
+    "created" : 1537350413891.000,
     "dirty" : false,
     "encoding" : "ISO-8859-1",
     "folds" : "",
     "hash" : "0",
-    "id" : "4E252A40",
-    "lastKnownWriteTime" : 1537259259,
-    "last_content_update" : 1537259259,
+    "id" : "16D26E08",
+    "lastKnownWriteTime" : 1537360376,
+    "last_content_update" : 1537360376,
     "path" : "~/Projects/consOpt/consOpt/NAMESPACE",
     "project_path" : "NAMESPACE",
     "properties" : {
-        "cursorPosition" : "1,0",
+        "cursorPosition" : "4,0",
         "scrollLine" : "0"
     },
-    "relative_order" : 4,
+    "relative_order" : 8,
     "source_on_save" : false,
     "source_window" : "",
     "type" : "r_namespace"
