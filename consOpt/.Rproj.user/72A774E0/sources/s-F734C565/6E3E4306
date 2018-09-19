@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "ISO-8859-1",
     "folds" : "",
-    "hash" : "0",
+    "hash" : "1882629131",
     "id" : "6E3E4306",
-    "lastKnownWriteTime" : 1537359996,
-    "last_content_update" : 1537359996130,
+    "lastKnownWriteTime" : 1537364313,
+    "last_content_update" : 1537364313853,
     "path" : "~/Projects/consOpt/consOpt/R/api.R",
     "project_path" : "R/api.R",
     "properties" : {
-        "cursorPosition" : "15,59",
-        "scrollLine" : "0"
+        "cursorPosition" : "16,42",
+        "scrollLine" : "4"
     },
     "relative_order" : 6,
     "source_on_save" : false,

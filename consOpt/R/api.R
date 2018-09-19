@@ -8,11 +8,13 @@
 #' @param combo.strategies A combination object specifying which strategies are combinations of which other strategies
 #' @param weights A named list of species weights
 #'
-#' @return
+#' @return A dataframe of optimization results
 #' @export
 #'
 #' @examples
-#' COMBO_info <- read.csv("combinations.csv")
+#' COMBO_info <- get(data("COMBO_info"))
+#' benefits.matrix <- get(data("Bij_fre_01"))
+#' cost.vector <- get(data("cost_fre_01"))$Cost
 #' opt.results <- Optimize(benefits.matrix, cost.vector, combo.strategies=COMBO_info)
 #' PlotResults(opt.results)
 Optimize <- function(benefits.matrix, cost.vector,

@@ -7,13 +7,13 @@
     "folds" : "",
     "hash" : "0",
     "id" : "809692DB",
-    "lastKnownWriteTime" : 1537349214,
-    "last_content_update" : 1537349214646,
+    "lastKnownWriteTime" : 1537363262,
+    "last_content_update" : 1537363262618,
     "path" : "~/Projects/consOpt/consOpt/R/combinations.R",
     "project_path" : "R/combinations.R",
     "properties" : {
-        "cursorPosition" : "69,1",
-        "scrollLine" : "52"
+        "cursorPosition" : "18,27",
+        "scrollLine" : "0"
     },
     "relative_order" : 5,
     "source_on_save" : false,

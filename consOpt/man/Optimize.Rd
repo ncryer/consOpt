@@ -23,11 +23,16 @@ Optimize(benefits.matrix, cost.vector, all.index = NULL,
 
 \item{weights}{A named list of species weights}
 }
+\value{
+A dataframe of optimization results
+}
 \description{
 Optimize over a range of budgets and survival thresholds
 }
 \examples{
-COMBO_info <- read.csv("combinations.csv")
+COMBO_info <- get(data("COMBO_info"))
+benefits.matrix <- get(data("Bij_fre_01"))
+cost.vector <- get(data("cost_fre_01"))$Cost
 opt.results <- Optimize(benefits.matrix, cost.vector, combo.strategies=COMBO_info)
 PlotResults(opt.results)
 }
