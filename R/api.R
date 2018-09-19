@@ -55,3 +55,16 @@ Optimize <- function(benefits.matrix, cost.vector,
 }
 
 
+#' Loads sample data for the optimization function.
+
+#' @return None
+#' @export
+#'
+#' @examples
+#' FREdata()
+FREdata <- function(){
+  assign("COMBO_info", get(data("COMBO_info")), envir = .GlobalEnv)
+  assign("benefits.matrix", get(data("Bij_fre_01")), envir = .GlobalEnv)
+  assign("strategy.cost.df", get(data("cost_fre_01")), envir= .GlobalEnv)
+  assign("cost.vector", get(data("cost_fre_01"))$Cost, envir= .GlobalEnv)
+}
