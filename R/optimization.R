@@ -50,7 +50,6 @@ optStruct <- R6Class("optStruct",
                          if (length(input.strategy.names) > 1){
                            # Strategies must be in the benefits matrix to be combined
                            if (!all(input.strategy.names %in% rownames(self$B))){
-                             print(input.strategy.names)
                              stop("User supplied multiple strategies to combine, but they were not found in the benefits matrix")
                            }
 
@@ -59,9 +58,9 @@ optStruct <- R6Class("optStruct",
                            applied.strategies <- union(combined.strategy.names, combined.strategy.names)
                            # Make sure strategies are in the cost vector
                            if (!all(applied.strategies %in% names(self$cost.vector))){
-                             print(applied.strategies %in% names(self$cost.vector))
-                             print(names(self$cost.vector))
-                             print(applied.strategies)
+                             # print(applied.strategies %in% names(self$cost.vector))
+                             # print(names(self$cost.vector))
+                             # print(applied.strategies)
                              stop("Some strategies to be combined were not in the cost vector")
                            }
                            total.cost <- sum(self$cost.vector[applied.strategies])
@@ -313,34 +312,40 @@ optStruct <- R6Class("optStruct",
                            # Decision variables
                            # ------------------
 
-                         # X[i,j] binary selection matrix
-                         add_variable(X[i,j], i = 1:n, j = 1:m, type="binary") %>%
+                           # X[i,j] binary selection matrix
+                           add_variable(X[i,j], i = 1:n, j = 1:m, type="binary") %>%
                            # y[i] Strategy selection vector
                            add_variable(y[i], i = 1:n, type="binary") %>%
 
                            # Objective function
                            # ------------------
-                         set_objective(sum_expr(B[i,j] * X[i,j], i = 1:n, j = 1:m)) %>%
+                           set_objective(sum_expr(B[i,j] * X[i,j], i = 1:n, j = 1:m)) %>%
 
                            # Constraints
                            # -----------
 
-                         # Constraint (1):
-                         # Ensure only one strategy applies to a target species
-                         add_constraint(sum_expr(X[i,j], i = 1:n) <= 1, j = 1:m) %>%
+                           # Constraint (1):
+                           # Ensure only one strategy applies to a target species
+                           add_constraint(sum_expr(X[i,j], i = 1:n) <= 1, j = 1:m, .show_progress_bar = FALSE) %>%
 
                            # Constraint (2)
                            # Force contributions of management strategy i to every target species j to be null if strategy i is not selected
                            # forall(i in strategies, j in target) xij[i][j] <= yi[i];
-                           add_constraint(X[i,j] <= y[i], i = 1:n, j = 1:m) %>%
+                           add_constraint(X[i,j] <= y[i], i = 1:n, j = 1:m, .show_progress_bar = FALSE) %>%
 
                            # Constraint (3)
-                           # "All" strategy constraint - if the "all" strategy is active, all others must be deselected
-                           add_constraint(y[all_idx] + y[i] <= 1, i = others) %>%
-
-                           # Constraint (4)
                            # Budget constraint
-                           add_constraint(sum_expr(y[i]*strategy.cost[i], i = 1:n) <= budget.max, i = 1:n)
+                           add_constraint(sum_expr(y[i]*strategy.cost[i], i = 1:n) <= budget.max, i = 1:n, .show_progress_bar = FALSE)
+
+                         # Constraint (4)
+                         # Optional constraints: certain strategies are combinations of certain others; therefore, picking one forbids picking the other
+                         # TODO: This combo information needs to come from somewhere, find out how
+                         if (!is.null(combos)) {
+                           for(i in 1:length(combos)){
+                             this.combo <- combos[[i]]
+                             model <- add_constraint(model, y[this.combo$strat.idx] + y[i] <= 1, i = this.combo$combined.idx, .show_progress_bar = FALSE)
+                           }
+                         }
 
                          # Solve the model
                          result <- solve_model(model, with_ROI(solver="lpsolve", verbose=FALSE))

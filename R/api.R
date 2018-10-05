@@ -43,7 +43,6 @@ Optimize <- function(benefits.matrix, cost.vector,
     }
   }
 
-  print(paste("All.index =", all.index))
 
   opt.results <- do.optimize.range(B = benefits.matrix,
                                    cost.vector = cost.vector,
