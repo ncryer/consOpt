@@ -1,3 +1,48 @@
+
+# ------------------------------
+# Combination constraints
+# ------------------------------
+
+constraint <- R6Class("constraint",
+                      public = list(
+                        strat.idx = NULL,
+                        combined.idx = NULL,
+                        initialize = function(strat.idx, combined.idx) {
+                         self$strat.idx <- strat.idx
+                         self$combined.idx <- combined.idx
+                        }
+                      ))
+
+get.constraint.list <- function(combo.mat, benefits.matrix) {
+
+  constraints <- list()
+
+  # Find combination strategies by identifying columns containing nontrivial combinations
+  strategy.combination.size <- apply(combo.mat, 2, function(x) length(which(x != '')))
+  combinations.idx <- which(strategy.combination.size > 1)
+  combinations <- combo.mat[,combinations.idx]
+
+  # Map each strategy name to its index in the benefits matrix
+  strat.names <- rownames(benefits.matrix)
+
+  for (i in 1:length(colnames(combinations))) {
+    combo.name <- colnames(combinations)[i]
+    # Get idx of compound strategy
+    strat.idx <- which(strat.names == combo.name)
+    # Get indeces of the strategies it combines
+    combined.idx <- c()
+    these.strats <- combinations[combo.name][combinations[combo.name] != ""]
+    for (strat in these.strats) {
+      combined.idx <- c(combined.idx, which(strat.names == gsub(" ", "", strat)))
+    }
+    combined.idx <- unlist(combined.idx)
+
+    constraints[[i]] <- constraint$new(strat.idx, combined.idx)
+  }
+
+  constraints
+}
+
 # ------------------------------
 # Struct for combinations (for optimize.range())
 # ------------------------------
@@ -26,7 +71,6 @@ combination <- R6Class("combination",
                          combo.counter = 0,
                          combos = list()
                        ))
-
 
 
 parse.combination.matrix <- function(combo.mat){

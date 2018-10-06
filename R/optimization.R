@@ -10,20 +10,49 @@ optStruct <- R6Class("optStruct",
                        t = NULL,
                        budget.max = NULL,
                        weights = NULL,
+                       combo.constraints = NULL,
 
-                       get.baseline.results = function(){
-                         #' Returns the "results" from only running the baseline strategy
-                         #'
-                         #' @return A list holding the results
-                         return( private$baseline.results )
+                       initialize = function(B, cost.vector, t, weights=NULL){
+                         self$B <- B
+                         self$cost.vector <- cost.vector
+                         self$t <- t
+                         names(self$cost.vector) <- rownames(self$B)
+                         # Check for names and do the rounding of B
+                         private$prepare()
+                         # Threshold B
+                         private$threshold(self$t)
+                         # Weight species groups (optional)
+                         if (!is.null(weights)) {
+                           self$weight.species(weights)
+                         }
+                         # Count the baseline results and remove etc.
+                         private$baseline.prep()
+                         # Set the zeroed out species to -1
+                         self$B[self$B==0] <- -1
+                         # We are now ready to do optimization
                        },
 
-                       add.combo = function(input.strategies=NULL, combined.strategies){
-                         #' The benefits matrix might contain strategies which are combinations of several strategies. The joint selection of these strategies
-                         #' will be artificially expensive if two combo strategies contain one or more of the same individual strategy, as the cost will be doubled
+
+                       add.combo.constraints = function(combo.constraints){
+                         #' Title
+                         #'
+                         #' @return
+                         #' @export
+                         #'
+                         #' @examples
+                         #'
+
+                         self$combo.constraints <- combo.constraints
+                       },
+
+                       add.compound = function(input.strategies=NULL, combined.strategies){
+                         #' The benefits matrix might contain strategies which are combinations of several strategies (called compound strategies). The joint selection of these strategies
+                         #' will be artificially expensive if two compound strategies contain one or more of the same individual strategy, as the cost will be doubled
                          #' E.g.: Strategy S12 is a combination of strategies S3, S7, and S10.
                          #'       Strategy S13 is a combination of strategies S6, S9, and S10
                          #' Selecting strategies S12 and S13 simultaneously will erronously count the cost of S10 twice, making this combination less favorable to the objective function.
+                         #'
+                         #' TODO This function is a goddamn travesty and should be refactored...
                          #'
                          #'
                          #' @param input.strategies A named list denoting strategy names, e.g. list(strategy1="S1", strategy2="S2", ...)
@@ -58,9 +87,6 @@ optStruct <- R6Class("optStruct",
                            applied.strategies <- union(combined.strategy.names, combined.strategy.names)
                            # Make sure strategies are in the cost vector
                            if (!all(applied.strategies %in% names(self$cost.vector))){
-                             # print(applied.strategies %in% names(self$cost.vector))
-                             # print(names(self$cost.vector))
-                             # print(applied.strategies)
                              stop("Some strategies to be combined were not in the cost vector")
                            }
                            total.cost <- sum(self$cost.vector[applied.strategies])
@@ -85,7 +111,6 @@ optStruct <- R6Class("optStruct",
                            }
 
                            if (!all(union.strategy.names %in% names(self$cost.vector))){
-                             print(union.strategy.names)
                              stop("Error: User attempted to combine strategies that were not in the cost vector")
                            }
                            if (is.null(input.strategy.names)) {
@@ -132,11 +157,11 @@ optStruct <- R6Class("optStruct",
                          #' @return A result container
 
                          if (private$baseline.solved) {
-                           return(self$get.baseline.results())
+                           return(private$get.baseline.results())
                          }
 
                          if (budget == 0){
-                           return(self$get.baseline.results())
+                           return(private$get.baseline.results())
                          }
                          res <- private$solve.ilp(budget)
                          parsed <- private$parse.results(res)
@@ -144,34 +169,9 @@ optStruct <- R6Class("optStruct",
                            return(res)
                          }
                          parsed
-                       },
-
-                       initialize = function(B, cost.vector, all.index, t, weights=NULL){
-                         # TODO: Add error handling if parameters are missing
-                         if(all.index > nrow(B)){
-                           stop("Error: User supplied a strategy (all.index) that was not in the benefits matrix")
-                         }
-
-
-                         self$B <- B
-                         self$cost.vector <- cost.vector
-                         self$all.index <- all.index
-                         self$t <- t
-                         names(self$cost.vector) <- rownames(self$B)
-                         # Check for names and do the rounding of B
-                         private$prepare()
-                         # Threshold B
-                         private$threshold(self$t)
-                         # Weight species groups (optional)
-                         if (!is.null(weights)) {
-                           self$weight.species(weights)
-                         }
-                         # Count the baseline results and remove etc.
-                         private$baseline.prep()
-                         # Set the zeroed out species to -1
-                         self$B[self$B==0] <- -1
-                         # We are now ready to do optimization
                        }
+
+
                      ),
                      private = list(
                        current.budget = NULL,
@@ -182,6 +182,13 @@ optStruct <- R6Class("optStruct",
                        state = list(
                          weighted = FALSE
                        ),
+
+                       get.baseline.results = function(){
+                         #' Returns the "results" from only running the baseline strategy
+                         #'
+                         #' @return A list holding the results
+                         return( private$baseline.results )
+                       },
 
                        prepare = function(){
                          #' Rounds the B matrix, check if B is labelled
@@ -271,7 +278,7 @@ optStruct <- R6Class("optStruct",
                          species.names <- colnames(self$B)[species.idx]
 
                          # Add in the baseline species
-                         species.names <- c(species.names, self$get.baseline.results()$species.groups)
+                         species.names <- c(species.names, private$get.baseline.results()$species.groups)
 
                          species.total <- length(species.names)
                          threshold <- self$t
@@ -339,13 +346,16 @@ optStruct <- R6Class("optStruct",
 
                          # Constraint (4)
                          # Optional constraints: certain strategies are combinations of certain others; therefore, picking one forbids picking the other
-                         # TODO: This combo information needs to come from somewhere, find out how
-                         if (!is.null(combos)) {
-                           for(i in 1:length(combos)){
-                             this.combo <- combos[[i]]
+                         print("Debug:")
+                         print("Adding constraints")
+
+                         if (!is.null(self$combo.constraints)) {
+                           for(i in 1:length(self$combo.constraints)){
+                             this.combo <- self$combo.constraints[[i]]
                              model <- add_constraint(model, y[this.combo$strat.idx] + y[i] <= 1, i = this.combo$combined.idx, .show_progress_bar = FALSE)
                            }
                          }
+                         print("Successfully added constraints")
 
                          # Solve the model
                          result <- solve_model(model, with_ROI(solver="lpsolve", verbose=FALSE))
@@ -374,7 +384,7 @@ optStruct <- R6Class("optStruct",
 #'
 #' @examples
 #'
-do.optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresholds = c(50.01, 60.01, 70.01), combo.strategies=NULL, weights=NULL){
+do.optimize.range <- function(B, cost.vector, budgets = NULL, thresholds = c(50.01, 60.01, 70.01), compound.strategies=NULL, combo.constraints=NULL, weights=NULL){
   # Set up the progress bar
   progress.bar <- txtProgressBar(min=1, max=100, initial=1)
   step <- 1
@@ -385,16 +395,21 @@ do.optimize.range <- function(B, cost.vector, all.index, budgets = NULL, thresho
   for (threshold in thresholds) {
 
     # Initialize a new optimization run with an opStruct
-    this.opt <- optStruct$new(B=B, cost.vector=cost.vector, all.index=all.index, t=threshold, weights=weights)
+    this.opt <- optStruct$new(B=B, cost.vector=cost.vector, t=threshold, weights=weights)
+
+    # Check if constraints need to be added to the ILP
+    if (!is.null(combo.constraints)){
+      this.opt$add.combo.constraints(combo.constraints)
+    }
 
     # Check if combo information needs to be supplied
-    if (!is.null(combo.strategies)){
-      combos <- combo.strategies$get.combos()
+    if (!is.null(compound.strategies)){
+      compounds <- compound.strategies$get.combos()
 
-      for(i in 1:length(combos)){
-        input <-combos[[i]]$input
-        output <- combos[[i]]$output
-        this.opt$add.combo(input, output)
+      for(i in 1:length(compounds)){
+        input <-compounds[[i]]$input
+        output <- compounds[[i]]$output
+        this.opt$add.compound(input, output)
       }
 
     }

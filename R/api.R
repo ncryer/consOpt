@@ -18,37 +18,36 @@
 #' opt.results <- Optimize(benefits.matrix, cost.vector, combo.strategies=COMBO_info)
 #' PlotResults(opt.results)
 Optimize <- function(benefits.matrix, cost.vector,
-                     all.index = NULL,
                      budgets = NULL,
                      thresholds = c(50.01, 60.01, 70.01),
                      combo.strategies = NULL,
                      weights = NULL) {
 
-  combos <- combo.strategies
+  combos <- NULL
+  constraints <- NULL
 
-  if ( is.null(all.index) & is.null(combo.strategies) ){
-    all.index <- nrow(benefits.matrix)
-    warning(paste("No information supplied regarding strategy combinations. Assuming strategy number", all.index,
-                  "to be the strategy which combines all strategies"))
+  if (is.null(combo.strategies) ){
+    warning("No combination or constraint information supplied.")
   } else {
     if (!is.null(combo.strategies)) {
       # All index was supplied through a combo matrix
       non.empty <- apply(combo.strategies, 2, function(x) sum(x != ''))
       all.index <- which(non.empty == max(non.empty))
-      if (!any(grepl("baseline", colnames(combo.strategies)))) {
+      if (!any(grepl("baseline", colnames(combo.strategies), ignore.case = TRUE))) {
         warning("Didn't find a baseline in the strategy combination matrix, assuming baseline strategy has index 1")
         all.index <- all.index + 1
       }
       combos <- parse.combination.matrix(combo.strategies)
+      constraints <- get.constraint.list(combo.strategies, benefits.matrix)
     }
   }
 
 
   opt.results <- do.optimize.range(B = benefits.matrix,
                                    cost.vector = cost.vector,
-                                   all.index = all.index,
                                    thresholds = thresholds,
-                                   combo.strategies = combos,
+                                   compound.strategies = combos,
+                                   combo.constraints = constraints,
                                    weights = weights)
   opt.results
 }
