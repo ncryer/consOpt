@@ -2,7 +2,6 @@
 #'
 #' @param benefits.matrix A [strategies]x[species] dataframe with named rows and columns
 #' @param cost.vector A list of strategy costs
-#' @param all.index An integer signifying the index of the strategy that combines all strategies
 #' @param budgets A list of budgets over which to optimize. If NULL, a sensible range of budgets will be automatically generated
 #' @param thresholds A list of survival thresholds over which to optimize, default = (50, 60, 70)
 #' @param combo.strategies A combination object specifying which strategies are combinations of which other strategies
@@ -32,10 +31,8 @@ Optimize <- function(benefits.matrix, cost.vector,
     if (!is.null(combo.strategies)) {
       # All index was supplied through a combo matrix
       non.empty <- apply(combo.strategies, 2, function(x) sum(x != ''))
-      all.index <- which(non.empty == max(non.empty))
       if (!any(grepl("baseline", colnames(combo.strategies), ignore.case = TRUE))) {
         warning("Didn't find a baseline in the strategy combination matrix, assuming baseline strategy has index 1")
-        all.index <- all.index + 1
       }
       combos <- parse.combination.matrix(combo.strategies)
       constraints <- get.constraint.list(combo.strategies, benefits.matrix)

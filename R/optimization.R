@@ -6,7 +6,6 @@ optStruct <- R6Class("optStruct",
                      public = list(
                        B = NULL,
                        cost.vector = NULL,
-                       all.index = NULL,
                        t = NULL,
                        budget.max = NULL,
                        weights = NULL,
@@ -28,13 +27,14 @@ optStruct <- R6Class("optStruct",
                          # Count the baseline results and remove etc.
                          private$baseline.prep()
                          # Set the zeroed out species to -1
+                         # TODO: There ought to be a mathematically principled way of doing this for all weighting schemes, like -Inf
                          self$B[self$B==0] <- -1
                          # We are now ready to do optimization
                        },
 
 
                        add.combo.constraints = function(combo.constraints){
-                         #' Title
+                         #' This should just be the strategy names, like "S12" -> c("S6", "S7", "S10")
                          #'
                          #' @return
                          #' @export
@@ -183,6 +183,43 @@ optStruct <- R6Class("optStruct",
                          weighted = FALSE
                        ),
 
+                       get.constraint.idx = function(){
+                         #' Map strategy selection constraints to their indeces in the benefits matrix/cost vector
+                         #'
+                         #' @return A list of constraint objects
+                         #'
+
+                         strat.names <- rownames(self$B)
+
+                         for(i in 1:length(self$combo.constraints)) {
+                           this.constraint <- self$combo.constraints[[i]]
+                         }
+
+                         # constraints <- list()
+                         #
+                         #
+                         # # Map each strategy name to its index in the benefits matrix
+                         # strat.names <- rownames(self$B)
+                         #
+                         # for (i in 1:length(colnames(combinations))) {
+                         #   combo.name <- colnames(combinations)[i]
+                         #   # Get idx of compound strategy
+                         #   strat.idx <- which(strat.names == combo.name)
+                         #   # Get indeces of the strategies it combines
+                         #   combined.idx <- c()
+                         #   these.strats <- combinations[combo.name][combinations[combo.name] != ""]
+                         #   for (strat in these.strats) {
+                         #     combined.idx <- c(combined.idx, which(strat.names == gsub(" ", "", strat)))
+                         #   }
+                         #   combined.idx <- unlist(combined.idx)
+                         #
+                         #   constraints[[i]] <- constraint$new(strat.idx, combined.idx)
+                         # }
+                         #
+                         # constraints
+                       },
+
+
                        get.baseline.results = function(){
                          #' Returns the "results" from only running the baseline strategy
                          #'
@@ -239,7 +276,7 @@ optStruct <- R6Class("optStruct",
                            # Remove baseline species from B, costs, and the all_index
                            self$B <- self$B[-private$baseline.idx, -baseline.species.idx]
                            self$cost.vector <- self$cost.vector[-private$baseline.idx]
-                           self$all.index <- self$all.index - 1
+                           # Have
                          }
 
                          # Update baseline results
@@ -302,14 +339,13 @@ optStruct <- R6Class("optStruct",
                          B <- self$B
                          strategy.cost <- self$cost.vector
                          budget.max <- budget
-                         all_idx <- self$all.index
+
 
                          # Number of strategies
                          n <- nrow(B)
                          # Number of species
                          m <- ncol(B)
 
-                         others <- which(1:n != all_idx)
 
                          # Set up the ILP
                          # --------------
@@ -346,17 +382,12 @@ optStruct <- R6Class("optStruct",
 
                          # Constraint (4)
                          # Optional constraints: certain strategies are combinations of certain others; therefore, picking one forbids picking the other
-                         print("Debug:")
-                         print("Adding constraints")
-
                          if (!is.null(self$combo.constraints)) {
                            for(i in 1:length(self$combo.constraints)){
                              this.combo <- self$combo.constraints[[i]]
                              model <- add_constraint(model, y[this.combo$strat.idx] + y[i] <= 1, i = this.combo$combined.idx, .show_progress_bar = FALSE)
                            }
                          }
-                         print("Successfully added constraints")
-
                          # Solve the model
                          result <- solve_model(model, with_ROI(solver="lpsolve", verbose=FALSE))
 
@@ -374,10 +405,10 @@ optStruct <- R6Class("optStruct",
 #'
 #' @param B A [strategies]x[species] dataframe with named rows and columns
 #' @param cost.vector A list of strategy costs
-#' @param all.index An integer signifying the index of the strategy that combines all strategies
 #' @param budgets A list of budgets over which to optimize. If NULL, a sensible range of budgets will be automatically generated
 #' @param thresholds A list of survival thresholds over which to optimize, default = (50, 60, 70)
-#' @param combo.strategies A combination object specifying which strategies are combinations of which other strategies
+#' @param compound.strategies A combination object specifying which strategies are combinations of which other strategies
+#' @param combination.constraints A list of constraint objects
 #' @param weights A named list of species weights
 #'
 #' @return A dataframe of optimization results
