@@ -13,12 +13,6 @@ constraint <- R6Class("constraint",
                         }
                       ))
 
-testfn <- function(combo.mat){
-  strategy.combination.size <- apply(combo.mat, 2, function(x) length(which(x != '')))
-  combinations.idx <- which(strategy.combination.size > 1)
-  combinations <- combo.mat[,combinations.idx]
-  combinations
-}
 
 get.constraint.list <- function(combo.mat, benefits.matrix) {
 

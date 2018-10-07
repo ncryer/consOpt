@@ -189,34 +189,31 @@ optStruct <- R6Class("optStruct",
                          #' @return A list of constraint objects
                          #'
 
+                         constraint.list <- list()
+
                          strat.names <- rownames(self$B)
 
                          for(i in 1:length(self$combo.constraints)) {
                            this.constraint <- self$combo.constraints[[i]]
+
+                           constraint.strat.name <- this.constraint$strat.idx
+                           constraint.strat.idx <- which(strat.names == constraint.strat.name)
+
+                           combined.idx <- c()
+                           for( name in this.constraint$combined.idx) {
+                             # Input may be supplied which stops the combo from ever being selected,
+                             # ie S14 -> S1, S2, ..., S14. Strategies can't constraint themselves, so we disregard it
+                             if (name == constraint.strat.name) {
+                               next
+                             }
+                             combined.idx <- c(combined.idx, which(strat.names==name))
+                           }
+
+                           constraint.list[[i]] <- constraint$new(constraint.strat.idx, unlist(combined.idx))
+
                          }
 
-                         # constraints <- list()
-                         #
-                         #
-                         # # Map each strategy name to its index in the benefits matrix
-                         # strat.names <- rownames(self$B)
-                         #
-                         # for (i in 1:length(colnames(combinations))) {
-                         #   combo.name <- colnames(combinations)[i]
-                         #   # Get idx of compound strategy
-                         #   strat.idx <- which(strat.names == combo.name)
-                         #   # Get indeces of the strategies it combines
-                         #   combined.idx <- c()
-                         #   these.strats <- combinations[combo.name][combinations[combo.name] != ""]
-                         #   for (strat in these.strats) {
-                         #     combined.idx <- c(combined.idx, which(strat.names == gsub(" ", "", strat)))
-                         #   }
-                         #   combined.idx <- unlist(combined.idx)
-                         #
-                         #   constraints[[i]] <- constraint$new(strat.idx, combined.idx)
-                         # }
-                         #
-                         # constraints
+                         constraint.list
                        },
 
 
@@ -276,7 +273,7 @@ optStruct <- R6Class("optStruct",
                            # Remove baseline species from B, costs, and the all_index
                            self$B <- self$B[-private$baseline.idx, -baseline.species.idx]
                            self$cost.vector <- self$cost.vector[-private$baseline.idx]
-                           # Have
+                           # Constraint indeces should be adjusted, but this is done by triggering private$get.constraint.idx
                          }
 
                          # Update baseline results
@@ -383,8 +380,9 @@ optStruct <- R6Class("optStruct",
                          # Constraint (4)
                          # Optional constraints: certain strategies are combinations of certain others; therefore, picking one forbids picking the other
                          if (!is.null(self$combo.constraints)) {
-                           for(i in 1:length(self$combo.constraints)){
-                             this.combo <- self$combo.constraints[[i]]
+                           constraints <- private$get.constraint.idx()
+                           for(i in 1:length(constraints)){
+                             this.combo <- constraints[[i]]
                              model <- add_constraint(model, y[this.combo$strat.idx] + y[i] <= 1, i = this.combo$combined.idx, .show_progress_bar = FALSE)
                            }
                          }
