@@ -35,7 +35,13 @@ Optimize <- function(benefits.matrix, cost.vector,
         warning("Didn't find a baseline in the strategy combination matrix, assuming baseline strategy has index 1")
       }
       combos <- parse.combination.matrix(combo.strategies)
+      if(length(combos$get.combos()) == 0){
+        combos <- NULL
+      }
       constraints <- get.constraint.list(combo.strategies, benefits.matrix)
+      if(length(constraints) == 0){
+        constraints <- NULL
+      }
     }
   }
 
