@@ -3,7 +3,7 @@
 \docType{data}
 \name{optStruct}
 \alias{optStruct}
-\title{Returns the "results" from only running the baseline strategy}
+\title{This should just be the strategy names, like "S12" -> c("S6", "S7", "S10")}
 \format{An object of class \code{R6ClassGenerator} of length 24.}
 \usage{
 optStruct
@@ -24,16 +24,16 @@ optStruct
 \item{budget}{A number}
 }
 \value{
-A list holding the results
-The benefits matrix might contain strategies which are combinations of several strategies. The joint selection of these strategies
-will be artificially expensive if two combo strategies contain one or more of the same individual strategy, as the cost will be doubled
-E.g.: Strategy S12 is a combination of strategies S3, S7, and S10.
-      Strategy S13 is a combination of strategies S6, S9, and S10
-Selecting strategies S12 and S13 simultaneously will erronously count the cost of S10 twice, making this combination less favorable to the objective function.
-
 Silently updates the benefits matrix and the cost vector
 
 A result container
+Map strategy selection constraints to their indeces in the benefits matrix/cost vector
+
+A list of constraint objects
+
+Returns the "results" from only running the baseline strategy
+
+A list holding the results
 Rounds the B matrix, check if B is labelled
 
 Updates self$B
@@ -53,6 +53,18 @@ Solves the ILP given a budget
 A list of results
 }
 \description{
-Returns the "results" from only running the baseline strategy
+This should just be the strategy names, like "S12" -> c("S6", "S7", "S10")
+}
+\examples{
+
+The benefits matrix might contain strategies which are combinations of several strategies (called compound strategies). The joint selection of these strategies
+will be artificially expensive if two compound strategies contain one or more of the same individual strategy, as the cost will be doubled
+E.g.: Strategy S12 is a combination of strategies S3, S7, and S10.
+      Strategy S13 is a combination of strategies S6, S9, and S10
+Selecting strategies S12 and S13 simultaneously will erronously count the cost of S10 twice, making this combination less favorable to the objective function.
+
+TODO This function is a goddamn travesty and should be refactored...
+
+
 }
 \keyword{datasets}

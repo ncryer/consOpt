@@ -3,3 +3,4 @@
 export(FREdata)
 export(Optimize)
 export(PlotResults)
+export(optStruct)

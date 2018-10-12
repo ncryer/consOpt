@@ -4,16 +4,14 @@
 \alias{Optimize}
 \title{Optimize over a range of budgets and survival thresholds}
 \usage{
-Optimize(benefits.matrix, cost.vector, all.index = NULL,
-  budgets = NULL, thresholds = c(50.01, 60.01, 70.01),
-  combo.strategies = NULL, weights = NULL)
+Optimize(benefits.matrix, cost.vector, budgets = NULL,
+  thresholds = c(50.01, 60.01, 70.01), combo.strategies = NULL,
+  weights = NULL)
 }
 \arguments{
 \item{benefits.matrix}{A [strategies]x[species] dataframe with named rows and columns}
 
 \item{cost.vector}{A list of strategy costs}
-
-\item{all.index}{An integer signifying the index of the strategy that combines all strategies}
 
 \item{budgets}{A list of budgets over which to optimize. If NULL, a sensible range of budgets will be automatically generated}
 

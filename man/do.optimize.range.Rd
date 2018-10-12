@@ -4,8 +4,8 @@
 \alias{do.optimize.range}
 \title{Optimize over a range of budgets and survival thresholds}
 \usage{
-do.optimize.range(B, cost.vector, all.index, budgets = NULL,
-  thresholds = c(50.01, 60.01, 70.01), combo.strategies = NULL,
+do.optimize.range(B, cost.vector, budgets = NULL, thresholds = c(50.01,
+  60.01, 70.01), compound.strategies = NULL, combo.constraints = NULL,
   weights = NULL)
 }
 \arguments{
@@ -13,15 +13,15 @@ do.optimize.range(B, cost.vector, all.index, budgets = NULL,
 
 \item{cost.vector}{A list of strategy costs}
 
-\item{all.index}{An integer signifying the index of the strategy that combines all strategies}
-
 \item{budgets}{A list of budgets over which to optimize. If NULL, a sensible range of budgets will be automatically generated}
 
 \item{thresholds}{A list of survival thresholds over which to optimize, default = (50, 60, 70)}
 
-\item{combo.strategies}{A combination object specifying which strategies are combinations of which other strategies}
+\item{compound.strategies}{A combination object specifying which strategies are combinations of which other strategies}
 
 \item{weights}{A named list of species weights}
+
+\item{combination.constraints}{A list of constraint objects}
 }
 \value{
 A dataframe of optimization results
