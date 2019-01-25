@@ -3,7 +3,7 @@ Type: Package
 Title: Species Conservation By Optimization
 Version: 0.1.0
 Author: Nicolai Cryer
-Maintainer: Nicolai Cryer <nicolai@faellesskabet.org>
+Maintainer: Nicolai Cryer <nkcryer@gmail.com>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 License: MIT
