@@ -2,8 +2,7 @@ Priority Threat Management by Integer Linear Programming
 ==========================================================
 
 This package implements a method to optimally allocate resources to conservation efforts, as described in Chadés et. al. (2015), _Benefits of integrating complementarity into priority threat management_. *Conservation Biology*, 29: 525-536. [doi:10.1111/cobi.12413](https://doi.org/10.1111/cobi.12413) 
-========================================================================================================================================================
-
+ 
 ## Development roadmap 
 
 Currently, this codebase implements the Integer Linear Programming algorithm described in (publication). The code recovers correct results on a number of test datasets, however the API is not yet stable and documentation is lacking. Additionally, little to no effort has been spent on unit testing or code quality control, as the focus until now has been on functionality first and foremost. 
