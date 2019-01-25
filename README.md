@@ -5,7 +5,7 @@ This package implements a method to optimally allocate resources to conservation
  
 ## Development roadmap 
 
-Currently, this codebase implements the Integer Linear Programming algorithm described in (publication). The code recovers correct results on a number of test datasets, however the API is not yet stable and documentation is lacking. Additionally, little to no effort has been spent on unit testing or code quality control, as the focus until now has been on functionality first and foremost. 
+Currently, this codebase implements the Integer Linear Programming algorithm described in [Chadés et. al.](https://onlinelibrary.wiley.com/doi/abs/10.1111/cobi.12413). The code recovers correct results on a number of test datasets, however the API is not yet stable and documentation is lacking. Additionally, little to no effort has been spent on unit testing or code quality control, as the focus until now has been on functionality first and foremost. 
  
 As such, the development goals for version 1.0 (CRAN release) is proposed as follows: 
 
